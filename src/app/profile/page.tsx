@@ -240,7 +240,7 @@ export default function ProfilePage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Hostel</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
                            <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select your hostel" />
@@ -278,7 +278,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Year of Study</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="e.g., 3" {...field} />
+                          <Input type="number" placeholder="e.g., 3" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -307,4 +307,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
