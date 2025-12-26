@@ -23,6 +23,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 const emergencyTypes = [
   {
@@ -71,32 +73,44 @@ export default function SosPage() {
   const isFormValid = studentName.trim() !== "" && enrollmentNumber.trim() !== "" && year.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
 
   const handleAlertConfirm = async () => {
-    if (selectedEmergency && user && db) {
-      try {
-        await addDoc(collection(db, "emergencyReports"), {
-          studentId: user.uid,
-          studentName: studentName,
-          enrollmentNumber: enrollmentNumber,
-          year: parseInt(year),
-          location: location,
-          emergencyType: selectedEmergency,
-          timestamp: serverTimestamp(),
-        });
-        toast({
-          title: "SOS Alert Sent",
-          description: `Your ${selectedEmergency.toLowerCase()} emergency alert has been sent. Authorities are on their way.`,
-          variant: "destructive",
-        });
-      } catch (error) {
-        console.error("Error sending SOS:", error);
-        toast({
-          title: "Error",
-          description: "Could not send SOS alert. Please try again.",
-          variant: "destructive",
-        });
-      }
-      setSelectedEmergency(null);
+    if (!selectedEmergency || !user || !db) {
+        toast({ title: "Error", description: "User not logged in or form is incomplete.", variant: "destructive" });
+        return;
     }
+
+    const reportData = {
+        studentId: user.uid,
+        studentName: studentName,
+        enrollmentNumber: enrollmentNumber,
+        year: parseInt(year),
+        location: location,
+        emergencyType: selectedEmergency,
+        timestamp: serverTimestamp(),
+    };
+
+    addDoc(collection(db, "emergencyReports"), reportData)
+        .then(() => {
+            toast({
+                title: "SOS Alert Sent",
+                description: `Your ${selectedEmergency.toLowerCase()} emergency alert has been sent. Authorities are on their way.`,
+                variant: "destructive",
+            });
+        })
+        .catch(error => {
+            const permissionError = new FirestorePermissionError({
+                path: 'emergencyReports',
+                operation: 'create',
+                requestResourceData: reportData,
+            }, error);
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                title: "Error",
+                description: "Could not send SOS alert. Please try again.",
+                variant: "destructive",
+            });
+        });
+
+    setSelectedEmergency(null);
   };
   
   if (loading || !user) {

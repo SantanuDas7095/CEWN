@@ -12,6 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { addDoc, collection, serverTimestamp, onSnapshot, query } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function MessPage() {
   const [rating, setRating] = useState(3);
@@ -57,35 +59,41 @@ export default function MessPage() {
         return;
     }
 
-    try {
-      await addDoc(collection(db, "messFoodRatings"), {
+    const ratingData = {
         studentId: user.uid,
         foodQualityRating: rating,
         sickAfterMealReport: isSick,
         timestamp: serverTimestamp(),
-      });
-      
-      if (isSick === 'yes') {
-        toast({
-            title: "Sickness Reported",
-            description: "Your report has been sent. Please visit the hospital if you feel unwell.",
-            variant: "destructive",
-        });
-      } else {
-        toast({
-            title: "Rating Submitted",
-            description: `You rated today's food ${rating} out of 5. Thank you!`,
-        });
-      }
+    };
 
-    } catch (error) {
-      console.error("Error submitting rating/sickness report:", error);
-      toast({
-        title: "Error",
-        description: "Could not submit your report. Please try again.",
-        variant: "destructive",
-      });
-    }
+    addDoc(collection(db, "messFoodRatings"), ratingData)
+        .then(() => {
+            if (isSick === 'yes') {
+                toast({
+                    title: "Sickness Reported",
+                    description: "Your report has been sent. Please visit the hospital if you feel unwell.",
+                    variant: "destructive",
+                });
+            } else {
+                toast({
+                    title: "Rating Submitted",
+                    description: `You rated today's food ${rating} out of 5. Thank you!`,
+                });
+            }
+        })
+        .catch(error => {
+            const permissionError = new FirestorePermissionError({
+                path: 'messFoodRatings',
+                operation: 'create',
+                requestResourceData: ratingData,
+            }, error);
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                title: "Error",
+                description: "Could not submit your report. Please try again.",
+                variant: "destructive",
+            });
+        });
   };
 
   if (loading || !user) {
