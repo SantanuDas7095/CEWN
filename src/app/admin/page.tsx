@@ -1,0 +1,77 @@
+import { Header } from "@/components/common/header";
+import { Footer } from "@/components/common/footer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LayoutDashboard, BrainCircuit } from "lucide-react";
+import LiveAlerts from "./components/live-alerts";
+import ResponseTimeChart from "./components/response-time-chart";
+import MessHygieneChart from "./components/mess-hygiene-chart";
+import PredictiveHealth from "./components/predictive-health";
+
+export default function AdminPage() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="flex-1 bg-secondary/50">
+        <div className="container mx-auto py-12 px-4 md:px-6">
+          <div className="space-y-4 mb-8">
+            <h1 className="text-4xl font-bold font-headline">Admin Dashboard</h1>
+            <p className="text-muted-foreground text-lg">
+              Monitor campus health, safety, and wellness in real-time.
+            </p>
+          </div>
+
+          <Tabs defaultValue="dashboard" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="dashboard">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Live Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="ai-insights">
+                <BrainCircuit className="mr-2 h-4 w-4" />
+                Predictive Health Insights
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="dashboard" className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="lg:col-span-4">
+                  <CardHeader>
+                    <CardTitle>Live Emergency Alerts</CardTitle>
+                    <CardDescription>Real-time stream of campus emergencies.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <LiveAlerts />
+                  </CardContent>
+                </Card>
+                <Card className="lg:col-span-3">
+                  <CardHeader>
+                    <CardTitle>Hospital Response Time</CardTitle>
+                    <CardDescription>Average emergency response time this week (in minutes).</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponseTimeChart />
+                  </CardContent>
+                </Card>
+              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mess Hygiene Trends</CardTitle>
+                  <CardDescription>Daily average food quality ratings across all hostels.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MessHygieneChart />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="ai-insights">
+              <PredictiveHealth />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}

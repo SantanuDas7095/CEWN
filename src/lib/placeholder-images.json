@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-campus",
+      "description": "A sprawling view of the NIT Agartala campus.",
+      "imageUrl": "https://images.unsplash.com/photo-1583373834259-46cc92173cb7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx1bml2ZXJzaXR5JTIwY2FtcHVzfGVufDB8fHx8MTc2NjY2Njc4MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "university campus"
+    },
+    {
+      "id": "sos-alert",
+      "description": "An image representing an emergency alert.",
+      "imageUrl": "https://images.unsplash.com/photo-1761118473230-189eabc3f2b4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxlbWVyZ2VuY3klMjBhbGVydHxlbnwwfHx8fDE3NjY3NTgxNDJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "emergency alert"
+    },
+    {
+      "id": "hospital-care",
+      "description": "An image representing hospital and medical care.",
+      "imageUrl": "https://images.unsplash.com/photo-1597807037496-c56a1d8bc29a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxob3NwaXRhbCUyMGJ1aWxkaW5nfGVufDB8fHx8MTc2NjcxNDAzOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hospital building"
+    },
+    {
+      "id": "mess-food",
+      "description": "An image representing healthy and clean food in a mess.",
+      "imageUrl": "https://images.unsplash.com/photo-1643068482612-0386a4611738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FmZXRlcmlhJTIwZm9vZHxlbnwwfHx8fDE3NjY3NjQ0MjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cafeteria food"
+    },
+    {
+      "id": "admin-dashboard",
+      "description": "An image representing an analytics dashboard.",
+      "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxhbmFseXRpY3MlMjBkYXNoYm9hcmR8ZW58MHx8fHwxNzY2NzY0NDIyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "analytics dashboard"
+    }
+  ]
 }
