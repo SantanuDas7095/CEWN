@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Header } from "@/components/common/header";
@@ -35,6 +36,8 @@ import { useEffect, useState } from "react";
 import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 const feedbackSchema = z.object({
   caseType: z.enum(["normal", "emergency"], { required_error: "Please select a case type." }),
@@ -107,34 +110,48 @@ export default function HospitalPage() {
       reason: "",
     }
   });
+  
+  useEffect(() => {
+    if (user?.displayName) {
+      appointmentForm.setValue("studentName", user.displayName);
+    }
+  }, [user, appointmentForm]);
 
   async function onFeedbackSubmit(values: z.infer<typeof feedbackSchema>) {
     if (!user || !db) {
       toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
       return;
     }
-    try {
-      await addDoc(collection(db, "hospitalFeedbacks"), {
-        studentId: user.uid,
-        waitingTime: values.waitingTime,
-        doctorAvailability: values.doctorAvailability,
-        postVisitFeedback: values.feedback,
-        emergencyVsNormal: values.caseType,
-        timestamp: serverTimestamp(),
-      });
-      toast({
-        title: "Feedback Submitted",
-        description: "Thank you for your feedback. It helps us improve our services.",
-      });
-      feedbackForm.reset();
-    } catch (error) {
-      console.error("Error submitting feedback: ", error);
-      toast({
-        title: "Error",
-        description: "Failed to submit feedback. Please try again.",
-        variant: "destructive",
-      });
-    }
+    
+    const feedbackData = {
+      studentId: user.uid,
+      waitingTime: values.waitingTime,
+      doctorAvailability: values.doctorAvailability,
+      postVisitFeedback: values.feedback,
+      emergencyVsNormal: values.caseType,
+      timestamp: serverTimestamp(),
+    };
+
+    addDoc(collection(db, "hospitalFeedbacks"), feedbackData)
+    .then(() => {
+        toast({
+            title: "Feedback Submitted",
+            description: "Thank you for your feedback. It helps us improve our services.",
+        });
+        feedbackForm.reset();
+    }).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: 'hospitalFeedbacks',
+            operation: 'create',
+            requestResourceData: feedbackData,
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            title: "Error",
+            description: "Failed to submit feedback. Please try again.",
+            variant: "destructive",
+        });
+    });
   }
 
   async function onAppointmentSubmit(values: z.infer<typeof appointmentSchema>) {
@@ -142,29 +159,38 @@ export default function HospitalPage() {
         toast({ title: "Authentication Error", description: "You must be logged in to book an appointment.", variant: "destructive" });
         return;
     }
-    try {
-      await addDoc(collection(db, "appointments"), {
-        studentId: user.uid,
-        studentName: values.studentName,
-        enrollmentNumber: values.enrollmentNumber,
-        appointmentDate: Timestamp.fromDate(values.appointmentDate),
-        appointmentTime: values.appointmentTime,
-        reason: values.reason,
-        status: 'scheduled',
+
+    const appointmentData = {
+      studentId: user.uid,
+      studentName: values.studentName,
+      enrollmentNumber: values.enrollmentNumber,
+      appointmentDate: Timestamp.fromDate(values.appointmentDate),
+      appointmentTime: values.appointmentTime,
+      reason: values.reason,
+      status: 'scheduled',
+    };
+
+    addDoc(collection(db, "appointments"), appointmentData)
+      .then(() => {
+        toast({
+          title: "Appointment Booked",
+          description: `Your appointment is scheduled for ${format(values.appointmentDate, "PPP")} at ${values.appointmentTime}.`,
+        });
+        appointmentForm.reset();
+      })
+      .catch((error) => {
+         const permissionError = new FirestorePermissionError({
+            path: `appointments`,
+            operation: 'create',
+            requestResourceData: appointmentData,
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+          title: "Booking Failed",
+          description: "Could not book your appointment. Please try again.",
+          variant: "destructive",
+        });
       });
-      toast({
-        title: "Appointment Booked",
-        description: `Your appointment is scheduled for ${format(values.appointmentDate, "PPP")} at ${values.appointmentTime}.`,
-      });
-      appointmentForm.reset();
-    } catch (error) {
-      console.error("Error booking appointment: ", error);
-      toast({
-        title: "Booking Failed",
-        description: "Could not book your appointment. Please try again.",
-        variant: "destructive",
-      });
-    }
   }
 
   if (loading || !user) {
