@@ -39,3 +39,17 @@ export type Appointment = {
     reason: string;
     status: 'scheduled' | 'completed' | 'cancelled';
 };
+
+export type UserProfile = {
+    id: string;
+    uid: string;
+    email: string;
+    displayName?: string;
+    photoURL?: string;
+    enrollmentNumber?: string;
+    hostel?: string;
+    department?: string;
+    year?: number;
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+}

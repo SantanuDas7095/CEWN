@@ -56,6 +56,24 @@
       },
       "required": ["studentId", "studentName", "enrollmentNumber", "appointmentDate", "appointmentTime", "reason", "status"]
     },
+    "UserProfile": {
+        "title": "User Profile",
+        "description": "Extended user profile information.",
+        "type": "object",
+        "properties": {
+            "uid": { "type": "string", "description": "The user's unique ID." },
+            "email": { "type": "string", "format": "email", "description": "The user's email address." },
+            "displayName": { "type": "string", "description": "The user's display name." },
+            "photoURL": { "type": "string", "format": "uri", "description": "URL of the user's profile picture." },
+            "enrollmentNumber": { "type": "string", "description": "The student's enrollment number." },
+            "hostel": { "type": "string", "description": "The student's hostel name and room number." },
+            "department": { "type": "string", "description": "The student's academic department." },
+            "year": { "type": "number", "description": "The student's current year of study." },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of profile creation." },
+            "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last profile update." }
+        },
+        "required": ["uid", "email"]
+    },
     "AdminRole": {
         "title": "Admin Role",
         "description": "Defines an administrative user.",
@@ -82,6 +100,10 @@
     "/appointments/{appointmentId}": {
       "schema": { "$ref": "#/entities/Appointment" },
       "description": "Collection of all student appointments."
+    },
+    "/userProfile/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores extended user profile information. The document ID is the user's UID."
     },
     "/roles_admin/{userId}": {
         "schema": { "$ref": "#/entities/AdminRole" },

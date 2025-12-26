@@ -1,14 +1,15 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { updateProfile } from 'firebase/auth';
+import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useUser, useAuth, useStorage } from '@/firebase';
+import { useUser, useAuth, useStorage, useFirestore } from '@/firebase';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, User as UserIcon } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import type { UserProfile } from '@/lib/types';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
+  enrollmentNumber: z.string().optional(),
+  hostel: z.string().optional(),
+  department: z.string().optional(),
+  year: z.coerce.number().optional(),
   photo: z.any().optional(),
 });
 
@@ -31,17 +39,53 @@ export default function ProfilePage() {
   const { user, loading: userLoading } = useUser();
   const auth = useAuth();
   const storage = useStorage();
+  const db = useFirestore();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    values: {
-        displayName: user?.displayName || '',
-        photo: null,
+    defaultValues: {
+      displayName: user?.displayName || '',
+      enrollmentNumber: '',
+      hostel: '',
+      department: '',
+      year: undefined,
+      photo: null,
     },
   });
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user || !db) {
+        router.push('/login');
+        return;
+    }
+
+    const fetchUserProfile = async () => {
+        const userDocRef = doc(db, 'userProfile', user.uid);
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+            const profile = docSnap.data() as UserProfile;
+            form.reset({
+                displayName: user.displayName || profile.displayName || '',
+                enrollmentNumber: profile.enrollmentNumber || '',
+                hostel: profile.hostel || '',
+                department: profile.department || '',
+                year: profile.year || undefined,
+            });
+        } else {
+             form.reset({
+                displayName: user.displayName || '',
+            });
+        }
+    };
+
+    fetchUserProfile();
+
+  }, [user, userLoading, db, router, form]);
+
 
   if (userLoading) {
     return (
@@ -52,7 +96,7 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    router.push('/login');
+    // This will be handled by the useEffect, but as a fallback
     return null;
   }
 
@@ -69,7 +113,7 @@ export default function ProfilePage() {
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!auth?.currentUser || !storage) return;
+    if (!auth?.currentUser || !storage || !db) return;
 
     setIsSubmitting(true);
     let photoURL = user.photoURL;
@@ -85,6 +129,29 @@ export default function ProfilePage() {
         displayName: data.displayName,
         photoURL: photoURL,
       });
+
+      const userProfileData: Omit<UserProfile, 'id' | 'email'> = {
+        uid: user.uid,
+        displayName: data.displayName,
+        photoURL: photoURL,
+        enrollmentNumber: data.enrollmentNumber || '',
+        hostel: data.hostel || '',
+        department: data.department || '',
+        year: data.year || 0,
+        updatedAt: Timestamp.now(),
+      };
+
+      const userDocRef = doc(db, 'userProfile', user.uid);
+      setDoc(userDocRef, userProfileData, { merge: true })
+        .catch(error => {
+             const permissionError = new FirestorePermissionError({
+                path: `userProfile/${user.uid}`,
+                operation: 'update',
+                requestResourceData: userProfileData,
+            }, error);
+            errorEmitter.emit('permission-error', permissionError);
+        });
+
 
       toast({
         title: 'Profile Updated',
@@ -145,6 +212,62 @@ export default function ProfilePage() {
                         <FormLabel>Display Name</FormLabel>
                         <FormControl>
                           <Input placeholder="Your full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="enrollmentNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Enrollment Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., 20-UCD-034" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hostel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hostel</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Hostel 5, Block B" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                   <FormField
+                    control={form.control}
+                    name="department"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Computer Science" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="year"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Year of Study</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 3" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
