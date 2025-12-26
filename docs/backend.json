@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "EmergencyReport": {
+      "title": "Emergency Report",
+      "description": "A report of an emergency on campus.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "The ID of the student making the report." },
+        "studentDetails": { "type": "string", "description": "Name and roll number of the student." },
+        "location": { "type": "string", "description": "The location of the emergency." },
+        "emergencyType": { "type": "string", "description": "The type of emergency (e.g., Medical, Safety)." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the report was created." }
+      },
+      "required": ["studentId", "studentDetails", "location", "emergencyType", "timestamp"]
+    },
+    "HospitalFeedback": {
+      "title": "Hospital Feedback",
+      "description": "Feedback submitted by a student after a hospital visit.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "The ID of the student giving feedback." },
+        "waitingTime": { "type": "number", "description": "The time spent waiting, in minutes." },
+        "doctorAvailability": { "type": "string", "enum": ["available", "unavailable"] },
+        "postVisitFeedback": { "type": "string", "description": "The detailed feedback." },
+        "emergencyVsNormal": { "type": "string", "enum": ["emergency", "normal"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "waitingTime", "doctorAvailability", "postVisitFeedback", "emergencyVsNormal", "timestamp"]
+    },
+    "MessFoodRating": {
+      "title": "Mess Food Rating",
+      "description": "A rating of the mess food quality.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "The ID of the student giving the rating." },
+        "foodQualityRating": { "type": "number", "description": "A rating from 1 to 5." },
+        "sickAfterMealReport": { "type": "string", "enum": ["yes", "no"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "foodQualityRating", "sickAfterMealReport", "timestamp"]
+    },
+    "AdminRole": {
+        "title": "Admin Role",
+        "description": "Defines an administrative user.",
+        "type": "object",
+        "properties": {}
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/emergencyReports/{reportId}": {
+      "schema": { "$ref": "#/entities/EmergencyReport" },
+      "description": "Collection of all emergency reports."
+    },
+    "/hospitalFeedbacks/{feedbackId}": {
+      "schema": { "$ref": "#/entities/HospitalFeedback" },
+      "description": "Collection of all hospital feedback."
+    },
+    "/messFoodRatings/{ratingId}": {
+      "schema": { "$ref": "#/entities/MessFoodRating" },
+      "description": "Collection of all mess food ratings."
+    },
+    "/roles_admin/{userId}": {
+        "schema": { "$ref": "#/entities/AdminRole" },
+        "description": "A collection where the document ID is the UID of an admin user."
+    }
+  }
+}
