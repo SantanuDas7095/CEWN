@@ -5,31 +5,85 @@ import { Footer } from "@/components/common/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Soup, Star, AlertTriangle, Utensils } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
+import { addDoc, collection, serverTimestamp, onSnapshot, query } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function MessPage() {
   const [rating, setRating] = useState(3);
   const { toast } = useToast();
+  const [weeklyScore, setWeeklyScore] = useState(0);
 
-  const handleRatingSubmit = () => {
-    toast({
-      title: "Rating Submitted",
-      description: `You rated today's food ${rating} out of 5. Thank you!`,
+  useEffect(() => {
+    const ratingsCol = collection(db, "messFoodRatings");
+    const q = query(ratingsCol);
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      if(querySnapshot.empty) {
+        setWeeklyScore(0);
+        return;
+      }
+      let totalRating = 0;
+      let ratingCount = 0;
+      querySnapshot.forEach((doc) => {
+        totalRating += doc.data().foodQualityRating;
+        ratingCount++;
+      });
+      const avgRating = totalRating / ratingCount;
+      setWeeklyScore(Math.round((avgRating / 5) * 100));
     });
+
+    return () => unsubscribe();
+  }, [])
+
+  const handleRatingSubmit = async () => {
+    try {
+      await addDoc(collection(db, "messFoodRatings"), {
+        studentId: "user-placeholder-id", // Replace with actual user ID
+        foodQualityRating: rating,
+        sickAfterMealReport: 'no',
+        timestamp: serverTimestamp(),
+      });
+
+      toast({
+        title: "Rating Submitted",
+        description: `You rated today's food ${rating} out of 5. Thank you!`,
+      });
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      toast({
+        title: "Error",
+        description: "Could not submit rating. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSicknessReport = () => {
-    toast({
-      title: "Sickness Reported",
-      description: "Your report has been sent to the mess committee and campus hospital. Please visit the hospital if you feel unwell.",
-      variant: "destructive",
-    });
+  const handleSicknessReport = async () => {
+     try {
+      await addDoc(collection(db, "messFoodRatings"), {
+        studentId: "user-placeholder-id", // Replace with actual user ID
+        foodQualityRating: rating,
+        sickAfterMealReport: 'yes',
+        timestamp: serverTimestamp(),
+      });
+      toast({
+        title: "Sickness Reported",
+        description: "Your report has been sent to the mess committee and campus hospital. Please visit the hospital if you feel unwell.",
+        variant: "destructive",
+      });
+    } catch(error) {
+       console.error("Error reporting sickness:", error);
+       toast({
+        title: "Error",
+        description: "Could not report sickness. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
-
-  const weeklyScore = 78;
 
   return (
     <div className="flex min-h-screen flex-col">

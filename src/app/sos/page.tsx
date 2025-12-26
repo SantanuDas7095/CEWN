@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const emergencyTypes = [
   {
@@ -45,14 +47,29 @@ export default function SosPage() {
   const [selectedEmergency, setSelectedEmergency] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleAlertConfirm = () => {
+  const handleAlertConfirm = async () => {
     if (selectedEmergency) {
-      console.log(`SOS sent for ${selectedEmergency} emergency.`);
-      toast({
-        title: "SOS Alert Sent",
-        description: `Your ${selectedEmergency.toLowerCase()} emergency alert has been sent. Authorities are on their way.`,
-        variant: "destructive",
-      });
+      try {
+        await addDoc(collection(db, "emergencyReports"), {
+          studentId: "user-placeholder-id", // Replace with actual user ID
+          studentDetails: "Rohan Sharma, 20-UCD-034", // Replace with actual user details
+          location: "Hostel 5, Block B", // Replace with actual location
+          emergencyType: selectedEmergency,
+          timestamp: serverTimestamp(),
+        });
+        toast({
+          title: "SOS Alert Sent",
+          description: `Your ${selectedEmergency.toLowerCase()} emergency alert has been sent. Authorities are on their way.`,
+          variant: "destructive",
+        });
+      } catch (error) {
+        console.error("Error sending SOS:", error);
+        toast({
+          title: "Error",
+          description: "Could not send SOS alert. Please try again.",
+          variant: "destructive",
+        });
+      }
       setSelectedEmergency(null);
     }
   };

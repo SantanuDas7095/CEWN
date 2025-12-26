@@ -22,6 +22,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useEffect, useState } from "react";
+import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const feedbackSchema = z.object({
   caseType: z.enum(["normal", "emergency"], { required_error: "Please select a case type." }),
@@ -35,8 +37,22 @@ export default function HospitalPage() {
   const [avgWaitTime, setAvgWaitTime] = useState(0);
 
   useEffect(() => {
-    // Simulate fetching and calculating average wait time
-    setAvgWaitTime(Math.floor(Math.random() * 45) + 15);
+    const feedbacksCol = collection(db, "hospitalFeedbacks");
+    const q = query(feedbacksCol);
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        if (querySnapshot.empty) {
+            setAvgWaitTime(0);
+            return;
+        }
+        let totalWaitTime = 0;
+        querySnapshot.forEach((doc) => {
+            totalWaitTime += doc.data().waitingTime;
+        });
+        setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const form = useForm<z.infer<typeof feedbackSchema>>({
@@ -47,13 +63,29 @@ export default function HospitalPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof feedbackSchema>) {
-    console.log("Feedback submitted:", values);
-    toast({
-      title: "Feedback Submitted",
-      description: "Thank you for your feedback. It helps us improve our services.",
-    });
-    form.reset();
+  async function onSubmit(values: z.infer<typeof feedbackSchema>) {
+    try {
+      await addDoc(collection(db, "hospitalFeedbacks"), {
+        studentId: "user-placeholder-id", // Replace with actual user ID
+        waitingTime: values.waitingTime,
+        doctorAvailability: values.doctorAvailability,
+        postVisitFeedback: values.feedback,
+        emergencyVsNormal: values.caseType,
+        timestamp: serverTimestamp(),
+      });
+      toast({
+        title: "Feedback Submitted",
+        description: "Thank you for your feedback. It helps us improve our services.",
+      });
+      form.reset();
+    } catch (error) {
+      console.error("Error submitting feedback: ", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (

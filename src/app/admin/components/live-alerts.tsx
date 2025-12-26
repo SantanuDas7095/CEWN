@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -7,10 +9,33 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { mockEmergencyReports } from "@/lib/data";
 import { formatDistanceToNow } from "date-fns";
+import { useEffect, useState } from "react";
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { EmergencyReport } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LiveAlerts() {
+  const [reports, setReports] = useState<EmergencyReport[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const reportsCol = collection(db, "emergencyReports");
+    const q = query(reportsCol, orderBy("timestamp", "desc"), limit(5));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const reportsData: EmergencyReport[] = [];
+      querySnapshot.forEach((doc) => {
+        reportsData.push({ id: doc.id, ...doc.data() } as EmergencyReport);
+      });
+      setReports(reportsData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const getBadgeVariant = (type: string) => {
     switch (type.toLowerCase()) {
       case "medical":
@@ -21,6 +46,16 @@ export default function LiveAlerts() {
         return "secondary";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[...Array(4)].map((_, i) => (
+           <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-md border">
@@ -34,8 +69,15 @@ export default function LiveAlerts() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mockEmergencyReports.map((report) => (
-            <TableRow key={report.reportId}>
+          {reports.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={4} className="h-24 text-center">
+                No recent emergency reports.
+              </TableCell>
+            </TableRow>
+          )}
+          {reports.map((report) => (
+            <TableRow key={report.id}>
               <TableCell>
                 <Badge variant={getBadgeVariant(report.emergencyType)}>
                   {report.emergencyType}
@@ -44,7 +86,7 @@ export default function LiveAlerts() {
               <TableCell className="font-medium">{report.location}</TableCell>
               <TableCell className="hidden md:table-cell">{report.studentDetails}</TableCell>
               <TableCell className="text-right text-muted-foreground">
-                {formatDistanceToNow(new Date(report.timestamp), { addSuffix: true })}
+                {report.timestamp ? formatDistanceToNow(report.timestamp.toDate(), { addSuffix: true }) : 'Just now'}
               </TableCell>
             </TableRow>
           ))}

@@ -1,3 +1,4 @@
+import { Timestamp } from "firebase/firestore";
 
 export type EmergencyReport = {
     id?: string;
@@ -5,7 +6,7 @@ export type EmergencyReport = {
     studentDetails: string;
     location: string;
     emergencyType: string;
-    timestamp: Date;
+    timestamp: Timestamp;
 };
 
 export type HospitalFeedback = {
@@ -15,7 +16,7 @@ export type HospitalFeedback = {
     doctorAvailability: 'available' | 'unavailable';
     postVisitFeedback: string;
     emergencyVsNormal: 'emergency' | 'normal';
-    timestamp: Date;
+    timestamp: Timestamp;
 };
 
 export type MessFoodRating = {
@@ -23,5 +24,5 @@ export type MessFoodRating = {
     studentId: string;
     foodQualityRating: number;
     sickAfterMealReport: 'yes' | 'no';
-    timestamp: Date;
+    timestamp: Timestamp;
 };
