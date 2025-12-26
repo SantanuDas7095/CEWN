@@ -75,7 +75,7 @@ export default function ProfilePage() {
     let photoURL = user.photoURL;
 
     try {
-      if (data.photo) {
+      if (data.photo && data.photo instanceof File) {
         const photoRef = ref(storage, `profile-pictures/${user.uid}`);
         const snapshot = await uploadBytes(photoRef, data.photo);
         photoURL = await getDownloadURL(snapshot.ref);
