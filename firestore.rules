@@ -3,16 +3,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if a user is an admin
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-    }
-
     // Allow authenticated users to create reports
     // Only admins can read all reports
     match /emergencyReports/{reportId} {
       allow create: if request.auth != null;
-      allow read: if isAdmin();
+      allow read: if exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
     // Allow authenticated users to create and read feedback
@@ -31,12 +26,12 @@ service cloud.firestore {
     // Only admins can read all appointments
     match /appointments/{appointmentId} {
       allow create: if request.auth != null;
-      allow read: if isAdmin();
+      allow read: if exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
     // Admins can read the admin roles collection
     match /roles_admin/{userId} {
-      allow read: if isAdmin();
+      allow read: if exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
   }
 }
