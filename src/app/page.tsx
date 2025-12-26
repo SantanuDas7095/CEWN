@@ -1,3 +1,6 @@
+
+'use client';
+
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -6,6 +9,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { ArrowRight, HeartPulse, Shield, Soup, LayoutDashboard } from "lucide-react";
+import { useAdmin } from "@/hooks/use-admin";
 
 const featureCards = [
   {
@@ -32,6 +36,7 @@ const featureCards = [
 ];
 
 export default function Home() {
+  const { isAdmin } = useAdmin();
   const heroImage = PlaceHolderImages.find(img => img.id === 'hero-campus');
 
   return (
@@ -109,36 +114,38 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="bg-card py-12 md:py-20">
-            <div className="container mx-auto px-4 md:px-6">
-                <div className="grid md:grid-cols-2 gap-8 items-center">
-                    <div className="space-y-4">
-                        <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">Admin Dashboard</div>
-                        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">Data-Driven Insights</h2>
-                        <p className="text-muted-foreground md:text-lg">
-                            Monitor live emergencies, track hospital performance, analyze food safety trends, and get AI-powered health predictions to proactively manage campus wellness.
-                        </p>
-                        <Button asChild>
-                            <Link href="/admin">
-                                View Dashboard <LayoutDashboard className="ml-2 h-4 w-4" />
-                            </Link>
-                        </Button>
-                    </div>
-                    <div>
-                        {PlaceHolderImages.find(img => img.id === 'admin-dashboard') && (
-                            <Image 
-                                src={PlaceHolderImages.find(img => img.id === 'admin-dashboard')!.imageUrl}
-                                alt="Admin Dashboard"
-                                width={600}
-                                height={400}
-                                className="rounded-lg shadow-lg"
-                                data-ai-hint={PlaceHolderImages.find(img => img.id === 'admin-dashboard')!.imageHint}
-                            />
-                        )}
+        {isAdmin && (
+            <section className="bg-card py-12 md:py-20">
+                <div className="container mx-auto px-4 md:px-6">
+                    <div className="grid md:grid-cols-2 gap-8 items-center">
+                        <div className="space-y-4">
+                            <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">Admin Dashboard</div>
+                            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl font-headline">Data-Driven Insights</h2>
+                            <p className="text-muted-foreground md:text-lg">
+                                Monitor live emergencies, track hospital performance, analyze food safety trends, and get AI-powered health predictions to proactively manage campus wellness.
+                            </p>
+                            <Button asChild>
+                                <Link href="/admin">
+                                    View Dashboard <LayoutDashboard className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
+                        </div>
+                        <div>
+                            {PlaceHolderImages.find(img => img.id === 'admin-dashboard') && (
+                                <Image 
+                                    src={PlaceHolderImages.find(img => img.id === 'admin-dashboard')!.imageUrl}
+                                    alt="Admin Dashboard"
+                                    width={600}
+                                    height={400}
+                                    className="rounded-lg shadow-lg"
+                                    data-ai-hint={PlaceHolderImages.find(img => img.id === 'admin-dashboard')!.imageHint}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        )}
       </main>
       <Footer />
     </div>
