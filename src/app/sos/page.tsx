@@ -55,6 +55,8 @@ export default function SosPage() {
   const router = useRouter();
 
   const [studentName, setStudentName] = useState("");
+  const [enrollmentNumber, setEnrollmentNumber] = useState("");
+  const [year, setYear] = useState("");
   const [location, setLocation] = useState("");
 
   useEffect(() => {
@@ -66,14 +68,16 @@ export default function SosPage() {
     }
   }, [user, loading, router]);
 
-  const isFormValid = studentName.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
+  const isFormValid = studentName.trim() !== "" && enrollmentNumber.trim() !== "" && year.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
 
   const handleAlertConfirm = async () => {
     if (selectedEmergency && user && db) {
       try {
         await addDoc(collection(db, "emergencyReports"), {
           studentId: user.uid,
-          studentDetails: studentName,
+          studentName: studentName,
+          enrollmentNumber: enrollmentNumber,
+          year: parseInt(year),
           location: location,
           emergencyType: selectedEmergency,
           timestamp: serverTimestamp(),
@@ -130,6 +134,25 @@ export default function SosPage() {
                     placeholder="Enter your full name" 
                     value={studentName}
                     onChange={(e) => setStudentName(e.target.value)}
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="enrollmentNumber">Enrollment Number</Label>
+                  <Input 
+                    id="enrollmentNumber" 
+                    placeholder="e.g., 20-UCD-034"
+                    value={enrollmentNumber}
+                    onChange={(e) => setEnrollmentNumber(e.target.value)}
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="year">Year of Study</Label>
+                  <Input
+                    id="year"
+                    type="number"
+                    placeholder="e.g., 3"
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">

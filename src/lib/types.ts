@@ -3,7 +3,9 @@ import { Timestamp } from "firebase/firestore";
 export type EmergencyReport = {
     id?: string;
     studentId: string;
-    studentDetails: string;
+    studentName: string;
+    enrollmentNumber: string;
+    year: number;
     location: string;
     emergencyType: string;
     timestamp: Timestamp;

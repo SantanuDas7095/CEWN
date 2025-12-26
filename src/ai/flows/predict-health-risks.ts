@@ -14,7 +14,9 @@ import {z} from 'genkit';
 
 const EmergencyReportSchema = z.object({
   reportId: z.string().describe('Unique identifier for the emergency report.'),
-  studentDetails: z.string().describe('Details of the student involved.'),
+  studentName: z.string().describe('Name of the student involved.'),
+  enrollmentNumber: z.string().describe("The student's enrollment number."),
+  year: z.number().describe("The student's current year of study."),
   location: z.string().describe('Location of the emergency.'),
   emergencyType: z.string().describe('Type of emergency (medical, safety, fire, etc.).'),
   timestamp: z.any().describe('Timestamp of the emergency report.'),
@@ -70,7 +72,7 @@ const prompt = ai.definePrompt({
 
   Emergency Reports:
   {{#each emergencyReports}}
-  - Report ID: {{reportId}}, Student Details: {{studentDetails}}, Location: {{location}}, Emergency Type: {{emergencyType}}, Timestamp: {{timestamp.seconds}}
+  - Report ID: {{reportId}}, Student: {{studentName}} ({{enrollmentNumber}}, Year {{year}}), Location: {{location}}, Emergency Type: {{emergencyType}}, Timestamp: {{timestamp.seconds}}
   {{/each}}
 
   Hospital Feedback:

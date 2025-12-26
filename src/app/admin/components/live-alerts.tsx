@@ -65,8 +65,8 @@ export default function LiveAlerts() {
         <TableHeader>
           <TableRow>
             <TableHead>Type</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead className="hidden md:table-cell">Student</TableHead>
+            <TableHead>Student</TableHead>
+            <TableHead className="hidden md:table-cell">Location</TableHead>
             <TableHead className="text-right">Time</TableHead>
           </TableRow>
         </TableHeader>
@@ -85,8 +85,11 @@ export default function LiveAlerts() {
                   {report.emergencyType}
                 </Badge>
               </TableCell>
-              <TableCell className="font-medium">{report.location}</TableCell>
-              <TableCell className="hidden md:table-cell">{report.studentDetails}</TableCell>
+              <TableCell className="font-medium">
+                <div>{report.studentName}</div>
+                <div className="text-xs text-muted-foreground">{report.enrollmentNumber} (Year {report.year})</div>
+              </TableCell>
+              <TableCell className="hidden md:table-cell">{report.location}</TableCell>
               <TableCell className="text-right text-muted-foreground">
                 {report.timestamp ? formatDistanceToNow(report.timestamp.toDate(), { addSuffix: true }) : 'Just now'}
               </TableCell>

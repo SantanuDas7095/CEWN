@@ -6,12 +6,14 @@
       "type": "object",
       "properties": {
         "studentId": { "type": "string", "description": "The ID of the student making the report." },
-        "studentDetails": { "type": "string", "description": "Name and roll number of the student." },
+        "studentName": { "type": "string", "description": "Name of the student." },
+        "enrollmentNumber": { "type": "string", "description": "The student's enrollment number." },
+        "year": { "type": "number", "description": "The student's current year of study." },
         "location": { "type": "string", "description": "The location of the emergency." },
         "emergencyType": { "type": "string", "description": "The type of emergency (e.g., Medical, Safety)." },
         "timestamp": { "type": "string", "format": "date-time", "description": "When the report was created." }
       },
-      "required": ["studentId", "studentDetails", "location", "emergencyType", "timestamp"]
+      "required": ["studentId", "studentName", "enrollmentNumber", "year", "location", "emergencyType", "timestamp"]
     },
     "HospitalFeedback": {
       "title": "Hospital Feedback",
