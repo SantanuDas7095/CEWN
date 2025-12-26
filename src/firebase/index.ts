@@ -12,15 +12,18 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
+// This function is for server-side use, like in actions.
+function initializeFirebase() {
+    const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const auth: Auth = getAuth(app);
+    const firestore: Firestore = getFirestore(app);
+    return { firebaseApp: app, auth, firestore };
+}
+
+// These are for client-side use via the provider.
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
 const firestore: Firestore = getFirestore(app);
-
-
-function initializeFirebase() {
-    return { firebaseApp: app, auth, firestore };
-}
 
 export { initializeFirebase, app as firebaseApp, auth, firestore };
 export * from './provider';
