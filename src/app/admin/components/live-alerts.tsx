@@ -12,15 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useFirestore } from "@/firebase";
 import type { EmergencyReport } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LiveAlerts() {
   const [reports, setReports] = useState<EmergencyReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const db = useFirestore();
 
   useEffect(() => {
+    if (!db) return;
     const reportsCol = collection(db, "emergencyReports");
     const q = query(reportsCol, orderBy("timestamp", "desc"), limit(5));
 
@@ -34,7 +36,7 @@ export default function LiveAlerts() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [db]);
 
   const getBadgeVariant = (type: string) => {
     switch (type.toLowerCase()) {

@@ -10,14 +10,26 @@ import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { addDoc, collection, serverTimestamp, onSnapshot, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useFirestore, useUser } from "@/firebase";
+import { useRouter } from "next/navigation";
 
 export default function MessPage() {
   const [rating, setRating] = useState(3);
   const { toast } = useToast();
   const [weeklyScore, setWeeklyScore] = useState(0);
+  const db = useFirestore();
+  const { user, loading } = useUser();
+  const router = useRouter();
+  
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
 
   useEffect(() => {
+    if (!db) return;
     const ratingsCol = collection(db, "messFoodRatings");
     const q = query(ratingsCol);
 
@@ -37,53 +49,52 @@ export default function MessPage() {
     });
 
     return () => unsubscribe();
-  }, [])
+  }, [db])
 
-  const handleRatingSubmit = async () => {
+  const handleSubmit = async (isSick: 'yes' | 'no') => {
+    if (!user || !db) {
+        toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
+        return;
+    }
+
     try {
       await addDoc(collection(db, "messFoodRatings"), {
-        studentId: "user-placeholder-id", // Replace with actual user ID
+        studentId: user.uid,
         foodQualityRating: rating,
-        sickAfterMealReport: 'no',
+        sickAfterMealReport: isSick,
         timestamp: serverTimestamp(),
       });
+      
+      if (isSick === 'yes') {
+        toast({
+            title: "Sickness Reported",
+            description: "Your report has been sent. Please visit the hospital if you feel unwell.",
+            variant: "destructive",
+        });
+      } else {
+        toast({
+            title: "Rating Submitted",
+            description: `You rated today's food ${rating} out of 5. Thank you!`,
+        });
+      }
 
-      toast({
-        title: "Rating Submitted",
-        description: `You rated today's food ${rating} out of 5. Thank you!`,
-      });
     } catch (error) {
-      console.error("Error submitting rating:", error);
+      console.error("Error submitting rating/sickness report:", error);
       toast({
         title: "Error",
-        description: "Could not submit rating. Please try again.",
+        description: "Could not submit your report. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleSicknessReport = async () => {
-     try {
-      await addDoc(collection(db, "messFoodRatings"), {
-        studentId: "user-placeholder-id", // Replace with actual user ID
-        foodQualityRating: rating,
-        sickAfterMealReport: 'yes',
-        timestamp: serverTimestamp(),
-      });
-      toast({
-        title: "Sickness Reported",
-        description: "Your report has been sent to the mess committee and campus hospital. Please visit the hospital if you feel unwell.",
-        variant: "destructive",
-      });
-    } catch(error) {
-       console.error("Error reporting sickness:", error);
-       toast({
-        title: "Error",
-        description: "Could not report sickness. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -92,7 +103,7 @@ export default function MessPage() {
         <div className="container mx-auto max-w-4xl py-12 px-4 md:px-6 md:py-20">
           <div className="text-center space-y-4">
             <Utensils className="mx-auto h-16 w-16 text-primary" />
-            <h1 className="text-4xl font-bold font-headline">Mess Food Safety &amp; Health Monitor</h1>
+            <h1 className="text-4xl font-bold font-headline">Mess Food Safety & Health Monitor</h1>
             <p className="text-muted-foreground text-lg">
               Your daily feedback makes our campus food better and safer.
             </p>
@@ -131,7 +142,7 @@ export default function MessPage() {
                 <span className="text-2xl font-bold">{rating}/5</span>
               </CardContent>
               <div className="p-6 pt-0">
-                <Button onClick={handleRatingSubmit} className="w-full">Submit Rating</Button>
+                <Button onClick={() => handleSubmit('no')} className="w-full">Submit Rating</Button>
               </div>
             </Card>
 
@@ -145,7 +156,7 @@ export default function MessPage() {
                         <CardDescription>If you feel sick after a meal, report it immediately.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={handleSicknessReport} variant="destructive" className="w-full text-lg py-6">
+                        <Button onClick={() => handleSubmit('yes')} variant="destructive" className="w-full text-lg py-6">
                             <AlertTriangle className="mr-2 h-5 w-5" /> Report Sickness
                         </Button>
                     </CardContent>

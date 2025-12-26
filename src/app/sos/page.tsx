@@ -3,7 +3,7 @@
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { HeartPulse, Shield, Flame, Home, Megaphone } from "lucide-react";
+import { HeartPulse, Shield, Flame, Home } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,10 +15,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Megaphone } from "lucide-react";
 
 const emergencyTypes = [
   {
@@ -46,13 +51,23 @@ const emergencyTypes = [
 export default function SosPage() {
   const [selectedEmergency, setSelectedEmergency] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user, loading } = useUser();
+  const db = useFirestore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
 
   const handleAlertConfirm = async () => {
-    if (selectedEmergency) {
+    if (selectedEmergency && user && db) {
       try {
         await addDoc(collection(db, "emergencyReports"), {
-          studentId: "user-placeholder-id", // Replace with actual user ID
-          studentDetails: "Rohan Sharma, 20-UCD-034", // Replace with actual user details
+          studentId: user.uid,
+          studentDetails: user.displayName || "Unknown User",
           location: "Hostel 5, Block B", // Replace with actual location
           emergencyType: selectedEmergency,
           timestamp: serverTimestamp(),
@@ -73,6 +88,14 @@ export default function SosPage() {
       setSelectedEmergency(null);
     }
   };
+  
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">

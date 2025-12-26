@@ -3,7 +3,7 @@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useFirestore } from "@/firebase";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -15,8 +15,10 @@ type ChartData = {
 export default function ResponseTimeChart() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
+  const db = useFirestore();
 
   useEffect(() => {
+    if (!db) return;
     const feedbacksCol = collection(db, "hospitalFeedbacks");
     const q = query(feedbacksCol);
 
@@ -45,7 +47,7 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [db]);
 
   if (loading) {
     return <Skeleton className="h-[300px] w-full" />

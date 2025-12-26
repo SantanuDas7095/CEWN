@@ -22,8 +22,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useEffect, useState } from "react";
-import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, limit, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp, onSnapshot, query } from "firebase/firestore";
+import { useFirestore, useUser } from "@/firebase";
+import { useRouter } from "next/navigation";
 
 const feedbackSchema = z.object({
   caseType: z.enum(["normal", "emergency"], { required_error: "Please select a case type." }),
@@ -35,8 +36,19 @@ const feedbackSchema = z.object({
 export default function HospitalPage() {
   const { toast } = useToast();
   const [avgWaitTime, setAvgWaitTime] = useState(0);
+  const db = useFirestore();
+  const { user, loading } = useUser();
+  const router = useRouter();
+
+   useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
 
   useEffect(() => {
+    if (!db) return;
     const feedbacksCol = collection(db, "hospitalFeedbacks");
     const q = query(feedbacksCol);
 
@@ -53,7 +65,7 @@ export default function HospitalPage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [db]);
 
   const form = useForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
@@ -64,9 +76,13 @@ export default function HospitalPage() {
   });
 
   async function onSubmit(values: z.infer<typeof feedbackSchema>) {
+    if (!user || !db) {
+        toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
+        return;
+    }
     try {
       await addDoc(collection(db, "hospitalFeedbacks"), {
-        studentId: "user-placeholder-id", // Replace with actual user ID
+        studentId: user.uid,
         waitingTime: values.waitingTime,
         doctorAvailability: values.doctorAvailability,
         postVisitFeedback: values.feedback,
@@ -86,6 +102,14 @@ export default function HospitalPage() {
         variant: "destructive",
       });
     }
+  }
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   return (

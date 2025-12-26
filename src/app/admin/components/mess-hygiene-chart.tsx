@@ -3,7 +3,7 @@
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useFirestore } from "@/firebase";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -16,10 +16,12 @@ export default function MessHygieneChart() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [hostels, setHostels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const db = useFirestore();
 
   const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 
   useEffect(() => {
+    if (!db) return;
     const ratingsCol = collection(db, "messFoodRatings");
     const q = query(ratingsCol);
 
@@ -63,7 +65,7 @@ export default function MessHygieneChart() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [db]);
 
   if (loading) {
     return <Skeleton className="h-[350px] w-full" />
