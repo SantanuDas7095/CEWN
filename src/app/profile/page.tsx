@@ -23,6 +23,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { UserProfile } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -238,9 +239,18 @@ export default function ProfilePage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Hostel</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Hostel 5, Block B" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                           <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your hostel" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Gargi hostel">Gargi hostel</SelectItem>
+                            <SelectItem value="RNT hostel">RNT hostel</SelectItem>
+                            <SelectItem value="Aryabhatta hostel">Aryabhatta hostel</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
