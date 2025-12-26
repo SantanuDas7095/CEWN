@@ -2,8 +2,8 @@
 
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
-import { Card, CardContent } from "@/components/ui/card";
-import { HeartPulse, Shield, Flame, Home } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { HeartPulse, Shield, Flame, Home, Megaphone } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +21,8 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useUser, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Megaphone } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const emergencyTypes = [
   {
@@ -55,20 +54,27 @@ export default function SosPage() {
   const db = useFirestore();
   const router = useRouter();
 
+  const [studentName, setStudentName] = useState("");
+  const [location, setLocation] = useState("");
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
+    if (user) {
+      setStudentName(user.displayName || "");
+    }
   }, [user, loading, router]);
 
+  const isFormValid = studentName.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
 
   const handleAlertConfirm = async () => {
     if (selectedEmergency && user && db) {
       try {
         await addDoc(collection(db, "emergencyReports"), {
           studentId: user.uid,
-          studentDetails: user.displayName || "Unknown User",
-          location: "Hostel 5, Block B", // Replace with actual location
+          studentDetails: studentName,
+          location: location,
           emergencyType: selectedEmergency,
           timestamp: serverTimestamp(),
         });
@@ -106,37 +112,70 @@ export default function SosPage() {
             <Megaphone className="mx-auto h-16 w-16 text-accent" />
             <h1 className="text-4xl font-bold font-headline">Emergency SOS</h1>
             <p className="text-muted-foreground text-lg">
-              In an emergency, tap the relevant button below. Your location and details will be automatically sent to campus authorities.
+              In an emergency, fill in your details and tap the relevant button below.
             </p>
           </div>
 
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Your Details</CardTitle>
+              <CardDescription>This information will be sent to the authorities.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Your Name</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="Enter your full name" 
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Your Current Location</Label>
+                  <Input 
+                    id="location" 
+                    placeholder="e.g., Hostel 5, Block B, Room 201" 
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <AlertDialog>
-            <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {emergencyTypes.map((emergency) => (
-                <AlertDialogTrigger asChild key={emergency.name}>
-                  <Card
-                    className={`cursor-pointer transition-all ${emergency.color} hover:shadow-xl`}
-                    onClick={() => setSelectedEmergency(emergency.name)}
-                  >
-                    <CardContent className="flex flex-col items-center justify-center p-8 space-y-4">
-                      {emergency.icon}
-                      <span className="text-2xl font-bold">{emergency.name}</span>
-                    </CardContent>
-                  </Card>
-                </AlertDialogTrigger>
-              ))}
+            <div className="mt-8">
+              <h3 className="text-center text-lg font-semibold mb-4">Select Emergency Type</h3>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {emergencyTypes.map((emergency) => (
+                  <AlertDialogTrigger asChild key={emergency.name}>
+                    <Card
+                      className={`cursor-pointer transition-all ${emergency.color} hover:shadow-xl`}
+                      onClick={() => setSelectedEmergency(emergency.name)}
+                    >
+                      <CardContent className="flex flex-col items-center justify-center p-8 space-y-4">
+                        {emergency.icon}
+                        <span className="text-2xl font-bold">{emergency.name}</span>
+                      </CardContent>
+                    </Card>
+                  </AlertDialogTrigger>
+                ))}
+              </div>
             </div>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm {selectedEmergency} Emergency?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will immediately alert campus security, the hostel warden, and the campus hospital. Only proceed if this is a genuine emergency.
+                  This will immediately alert campus security with your name and location. Only proceed if this is a genuine emergency.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setSelectedEmergency(null)}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleAlertConfirm}
+                  disabled={!isFormValid}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   Confirm Emergency

@@ -15,17 +15,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAdmin } from "@/hooks/use-admin";
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/sos", label: "SOS" },
   { href: "/hospital", label: "Hospital" },
   { href: "/mess", label: "Mess" },
-  { href: "/admin", label: "Admin" },
 ];
 
 export function Header() {
   const { user, loading } = useUser();
+  const { isAdmin } = useAdmin();
   const auth = useAuth();
 
   const handleSignOut = async () => {
@@ -33,6 +34,11 @@ export function Header() {
       await signOut(auth);
     }
   };
+
+  const allNavLinks = [...navLinks];
+  if (isAdmin) {
+    allNavLinks.push({ href: "/admin", label: "Admin" });
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
@@ -42,7 +48,7 @@ export function Header() {
           <span className="text-lg font-headline">NIT Agartala CEWN</span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
-          {navLinks.map(({ href, label }) => (
+          {allNavLinks.map(({ href, label }) => (
             <Link
               key={label}
               href={href}
@@ -104,7 +110,7 @@ export function Header() {
                   <span className="text-lg font-headline">NIT Agartala CEWN</span>
                 </Link>
                 <nav className="grid gap-4">
-                  {navLinks.map(({ href, label }) => (
+                  {allNavLinks.map(({ href, label }) => (
                     <Link
                       key={label}
                       href={href}

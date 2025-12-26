@@ -1,14 +1,37 @@
-import { Header } from "@/components/common/header";
-import { Footer } from "@/components/common/footer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LayoutDashboard, BrainCircuit } from "lucide-react";
-import LiveAlerts from "./components/live-alerts";
-import ResponseTimeChart from "./components/response-time-chart";
-import MessHygieneChart from "./components/mess-hygiene-chart";
-import PredictiveHealth from "./components/predictive-health";
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAdmin } from '@/hooks/use-admin';
+import { Header } from '@/components/common/header';
+import { Footer } from '@/components/common/footer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LayoutDashboard, BrainCircuit, Loader2 } from 'lucide-react';
+import LiveAlerts from './components/live-alerts';
+import ResponseTimeChart from './components/response-time-chart';
+import MessHygieneChart from './components/mess-hygiene-chart';
+import PredictiveHealth from './components/predictive-health';
 
 export default function AdminPage() {
+  const { isAdmin, loading } = useAdmin();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, loading, router]);
+
+  if (loading || !isAdmin) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="mt-4 text-muted-foreground">Verifying access...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
