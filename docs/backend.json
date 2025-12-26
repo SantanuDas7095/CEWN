@@ -41,6 +41,21 @@
       },
       "required": ["studentId", "foodQualityRating", "sickAfterMealReport", "timestamp"]
     },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "A scheduled appointment at the campus hospital.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "enrollmentNumber": { "type": "string" },
+        "appointmentDate": { "type": "string", "format": "date-time" },
+        "appointmentTime": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "completed", "cancelled"], "default": "scheduled" }
+      },
+      "required": ["studentId", "studentName", "enrollmentNumber", "appointmentDate", "appointmentTime", "reason", "status"]
+    },
     "AdminRole": {
         "title": "Admin Role",
         "description": "Defines an administrative user.",
@@ -63,6 +78,10 @@
     "/messFoodRatings/{ratingId}": {
       "schema": { "$ref": "#/entities/MessFoodRating" },
       "description": "Collection of all mess food ratings."
+    },
+    "/appointments/{appointmentId}": {
+      "schema": { "$ref": "#/entities/Appointment" },
+      "description": "Collection of all student appointments."
     },
     "/roles_admin/{userId}": {
         "schema": { "$ref": "#/entities/AdminRole" },

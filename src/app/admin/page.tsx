@@ -7,11 +7,12 @@ import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LayoutDashboard, BrainCircuit, Loader2 } from 'lucide-react';
+import { LayoutDashboard, BrainCircuit, Loader2, CalendarClock } from 'lucide-react';
 import LiveAlerts from './components/live-alerts';
 import ResponseTimeChart from './components/response-time-chart';
 import MessHygieneChart from './components/mess-hygiene-chart';
 import PredictiveHealth from './components/predictive-health';
+import AppointmentsList from './components/appointments-list';
 
 export default function AdminPage() {
   const { isAdmin, loading } = useAdmin();
@@ -45,14 +46,18 @@ export default function AdminPage() {
           </div>
 
           <Tabs defaultValue="dashboard" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dashboard">
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 Live Dashboard
               </TabsTrigger>
+              <TabsTrigger value="appointments">
+                <CalendarClock className="mr-2 h-4 w-4" />
+                Appointments
+              </TabsTrigger>
               <TabsTrigger value="ai-insights">
                 <BrainCircuit className="mr-2 h-4 w-4" />
-                Predictive Health Insights
+                Predictive Health
               </TabsTrigger>
             </TabsList>
             
@@ -86,6 +91,18 @@ export default function AdminPage() {
                   <MessHygieneChart />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="appointments">
+              <Card>
+                  <CardHeader>
+                    <CardTitle>Upcoming Appointments</CardTitle>
+                    <CardDescription>A list of all scheduled appointments.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <AppointmentsList />
+                  </CardContent>
+                </Card>
             </TabsContent>
 
             <TabsContent value="ai-insights">

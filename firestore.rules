@@ -24,6 +24,11 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    match /appointments/{appointmentId} {
+      allow create: if request.auth != null;
+      allow read: if isAdmin();
+    }
+
     // Admins can read the admin roles collection
     match /roles_admin/{userId} {
       allow read: if isAdmin();

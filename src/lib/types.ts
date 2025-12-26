@@ -28,3 +28,14 @@ export type MessFoodRating = {
     sickAfterMealReport: 'yes' | 'no';
     timestamp: Timestamp;
 };
+
+export type Appointment = {
+    id?: string;
+    studentId: string;
+    studentName: string;
+    enrollmentNumber: string;
+    appointmentDate: Timestamp;
+    appointmentTime: string;
+    reason: string;
+    status: 'scheduled' | 'completed' | 'cancelled';
+};

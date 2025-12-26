@@ -2,15 +2,14 @@
 
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Stethoscope, Users } from "lucide-react";
+import { Clock, Stethoscope, Users, Calendar as CalendarIcon, BookMarked } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, useForm as useFeedbackForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -21,8 +20,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { addDoc, collection, serverTimestamp, onSnapshot, query } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +43,19 @@ const feedbackSchema = z.object({
   feedback: z.string().min(10, "Feedback must be at least 10 characters.").max(500),
 });
 
+const appointmentSchema = z.object({
+  studentName: z.string().min(2, "Name is required."),
+  enrollmentNumber: z.string().min(5, "Enrollment number is required."),
+  appointmentDate: z.date({ required_error: "Please select a date." }),
+  appointmentTime: z.string({ required_error: "Please select a time slot." }),
+  reason: z.string().min(10, "Please provide a brief reason for your visit.").max(200),
+});
+
+const timeSlots = [
+  "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+];
+
 export default function HospitalPage() {
   const { toast } = useToast();
   const [avgWaitTime, setAvgWaitTime] = useState(0);
@@ -40,12 +63,11 @@ export default function HospitalPage() {
   const { user, loading } = useUser();
   const router = useRouter();
 
-   useEffect(() => {
+  useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
-
 
   useEffect(() => {
     if (!db) return;
@@ -53,21 +75,21 @@ export default function HospitalPage() {
     const q = query(feedbacksCol);
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        if (querySnapshot.empty) {
-            setAvgWaitTime(0);
-            return;
-        }
-        let totalWaitTime = 0;
-        querySnapshot.forEach((doc) => {
-            totalWaitTime += doc.data().waitingTime;
-        });
-        setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
+      if (querySnapshot.empty) {
+        setAvgWaitTime(0);
+        return;
+      }
+      let totalWaitTime = 0;
+      querySnapshot.forEach((doc) => {
+        totalWaitTime += doc.data().waitingTime;
+      });
+      setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
     });
 
     return () => unsubscribe();
   }, [db]);
 
-  const form = useForm<z.infer<typeof feedbackSchema>>({
+  const feedbackForm = useFeedbackForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
       waitingTime: 0,
@@ -75,10 +97,21 @@ export default function HospitalPage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof feedbackSchema>) {
+  const appointmentForm = useForm<z.infer<typeof appointmentSchema>>({
+    resolver: zodResolver(appointmentSchema),
+    values: {
+      studentName: user?.displayName || "",
+      enrollmentNumber: "",
+      appointmentDate: new Date(),
+      appointmentTime: "",
+      reason: "",
+    }
+  });
+
+  async function onFeedbackSubmit(values: z.infer<typeof feedbackSchema>) {
     if (!user || !db) {
-        toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
-        return;
+      toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
+      return;
     }
     try {
       await addDoc(collection(db, "hospitalFeedbacks"), {
@@ -93,12 +126,42 @@ export default function HospitalPage() {
         title: "Feedback Submitted",
         description: "Thank you for your feedback. It helps us improve our services.",
       });
-      form.reset();
+      feedbackForm.reset();
     } catch (error) {
       console.error("Error submitting feedback: ", error);
       toast({
         title: "Error",
         description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function onAppointmentSubmit(values: z.infer<typeof appointmentSchema>) {
+    if (!user || !db) {
+        toast({ title: "Authentication Error", description: "You must be logged in to book an appointment.", variant: "destructive" });
+        return;
+    }
+    try {
+      await addDoc(collection(db, "appointments"), {
+        studentId: user.uid,
+        studentName: values.studentName,
+        enrollmentNumber: values.enrollmentNumber,
+        appointmentDate: Timestamp.fromDate(values.appointmentDate),
+        appointmentTime: values.appointmentTime,
+        reason: values.reason,
+        status: 'scheduled',
+      });
+      toast({
+        title: "Appointment Booked",
+        description: `Your appointment is scheduled for ${format(values.appointmentDate, "PPP")} at ${values.appointmentTime}.`,
+      });
+      appointmentForm.reset();
+    } catch (error) {
+      console.error("Error booking appointment: ", error);
+      toast({
+        title: "Booking Failed",
+        description: "Could not book your appointment. Please try again.",
         variant: "destructive",
       });
     }
@@ -158,107 +221,230 @@ export default function HospitalPage() {
             </Card>
           </div>
 
-          <Card className="mt-12">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">Post-Visit Feedback</CardTitle>
-              <p className="text-muted-foreground">Your feedback is mandatory and crucial for accountability.</p>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                  <div className="grid md:grid-cols-2 gap-8">
+          <div className="mt-12 grid lg:grid-cols-2 gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                  <BookMarked />
+                  Book an Appointment
+                </CardTitle>
+                <CardDescription>Schedule a non-emergency visit to the campus hospital.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...appointmentForm}>
+                  <form onSubmit={appointmentForm.handleSubmit(onAppointmentSubmit)} className="space-y-6">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <FormField
+                          control={appointmentForm.control}
+                          name="studentName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Your full name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={appointmentForm.control}
+                          name="enrollmentNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Enrollment Number</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g. 20-UCD-034" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                    </div>
+                     <FormField
+                        control={appointmentForm.control}
+                        name="appointmentDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Appointment Date</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                      "pl-3 text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) =>
+                                    date < new Date(new Date().setHours(0,0,0,0)) 
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={appointmentForm.control}
+                        name="appointmentTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Time Slot</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a time slot" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {timeSlots.map(slot => (
+                                  <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                     <FormField
+                        control={appointmentForm.control}
+                        name="reason"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Reason for Visit</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Briefly describe the reason for your appointment..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    <Button type="submit" className="w-full">Book Appointment</Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline text-2xl">Post-Visit Feedback</CardTitle>
+                <p className="text-muted-foreground">Your feedback is mandatory and crucial for accountability.</p>
+              </CardHeader>
+              <CardContent>
+                <Form {...feedbackForm}>
+                  <form onSubmit={feedbackForm.handleSubmit(onFeedbackSubmit)} className="space-y-8">
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <FormField
+                        control={feedbackForm.control}
+                        name="caseType"
+                        render={({ field }) => (
+                          <FormItem className="space-y-3">
+                            <FormLabel>Case Type</FormLabel>
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex space-x-4"
+                              >
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <RadioGroupItem value="normal" />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">Normal</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <RadioGroupItem value="emergency" />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">Emergency</FormLabel>
+                                </FormItem>
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={feedbackForm.control}
+                        name="doctorAvailability"
+                        render={({ field }) => (
+                          <FormItem className="space-y-3">
+                            <FormLabel>Doctor Availability on Arrival</FormLabel>
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex space-x-4"
+                              >
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <RadioGroupItem value="available" />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">Available</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <RadioGroupItem value="unavailable" />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">Unavailable</FormLabel>
+                                </FormItem>
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <FormField
-                      control={form.control}
-                      name="caseType"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
-                          <FormLabel>Case Type</FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              className="flex space-x-4"
-                            >
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="normal" />
-                                </FormControl>
-                                <FormLabel className="font-normal">Normal</FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="emergency" />
-                                </FormControl>
-                                <FormLabel className="font-normal">Emergency</FormLabel>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        control={feedbackForm.control}
+                        name="waitingTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Waiting Time (in minutes)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="e.g., 30" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     <FormField
-                      control={form.control}
-                      name="doctorAvailability"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
-                          <FormLabel>Doctor Availability on Arrival</FormLabel>
-                           <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              className="flex space-x-4"
-                            >
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="available" />
-                                </FormControl>
-                                <FormLabel className="font-normal">Available</FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="unavailable" />
-                                </FormControl>
-                                <FormLabel className="font-normal">Unavailable</FormLabel>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                   <FormField
-                      control={form.control}
-                      name="waitingTime"
+                      control={feedbackForm.control}
+                      name="feedback"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Waiting Time (in minutes)</FormLabel>
+                          <FormLabel>Post-Visit Feedback</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="e.g., 30" {...field} />
+                            <Textarea placeholder="Describe your experience..." {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  <FormField
-                    control={form.control}
-                    name="feedback"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Post-Visit Feedback</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Describe your experience..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit">Submit Feedback</Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                    <Button type="submit">Submit Feedback</Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
       <Footer />
