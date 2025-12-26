@@ -8,22 +8,27 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // Allow authenticated users to create reports, feedback, and ratings
+    // Allow authenticated users to create reports
+    // Only admins can read all reports
     match /emergencyReports/{reportId} {
       allow create: if request.auth != null;
       allow read: if isAdmin();
     }
 
+    // Allow authenticated users to create and read feedback
     match /hospitalFeedbacks/{feedbackId} {
       allow create: if request.auth != null;
-      allow read: if isAdmin();
+      allow read: if request.auth != null;
     }
 
+    // Allow authenticated users to create and read ratings
     match /messFoodRatings/{ratingId} {
       allow create: if request.auth != null;
-      allow read: if isAdmin();
+      allow read: if request.auth != null;
     }
 
+    // Allow authenticated users to create appointments
+    // Only admins can read all appointments
     match /appointments/{appointmentId} {
       allow create: if request.auth != null;
       allow read: if isAdmin();
