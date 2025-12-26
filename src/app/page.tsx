@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
-import { ArrowRight, HeartPulse, Shield, Soup, LayoutDashboard } from "lucide-react";
+import { ArrowRight, HeartPulse, Shield, Soup, LayoutDashboard, Utensils } from "lucide-react";
 import { useAdmin } from "@/hooks/use-admin";
+import DailyMessRating from "./components/daily-mess-rating";
 
 const featureCards = [
   {
@@ -38,6 +39,8 @@ const featureCards = [
 export default function Home() {
   const { isAdmin } = useAdmin();
   const heroImage = PlaceHolderImages.find(img => img.id === 'hero-campus');
+  const todaysReviewImage = PlaceHolderImages.find(img => img.id === 'todays-review');
+
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -78,7 +81,7 @@ export default function Home() {
                 Solving real problems with a connected, transparent, and accountable system.
               </p>
             </div>
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
               {featureCards.map((feature) => (
                 <Card key={feature.title} className="flex flex-col overflow-hidden transition-all hover:shadow-xl">
                   {feature.image && (
@@ -110,6 +113,37 @@ export default function Home() {
                   </div>
                 </Card>
               ))}
+               <Card className="flex flex-col overflow-hidden transition-all hover:shadow-xl md:col-span-2 lg:col-span-2">
+                 {todaysReviewImage && (
+                     <div className="w-full h-48 relative">
+                      <Image
+                        src={todaysReviewImage.imageUrl}
+                        alt={todaysReviewImage.title}
+                        fill
+                        className="object-cover"
+                        data-ai-hint={todaysReviewImage.imageHint}
+                      />
+                     </div>
+                  )}
+                <CardHeader className="flex flex-row items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <Utensils className="h-8 w-8 text-accent" />
+                  </div>
+                  <div className="flex-grow">
+                    <CardTitle className="font-headline">Today's Mess Food Review</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <DailyMessRating />
+                </CardContent>
+                 <div className="p-6 pt-0">
+                    <Button asChild variant="outline" className="w-full">
+                      <Link href="/mess">
+                        Rate Now <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+              </Card>
             </div>
           </div>
         </section>
