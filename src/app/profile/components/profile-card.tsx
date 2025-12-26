@@ -16,10 +16,10 @@ interface ProfileCardProps {
 
 const ProfileInfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value?: string | number | null }) => (
   <div className="flex items-center gap-4">
-    <div className="flex-shrink-0 text-primary-foreground/80">{icon}</div>
+    <div className="flex-shrink-0 text-primary">{icon}</div>
     <div className="flex-grow">
-      <p className="font-bold text-lg text-primary-foreground">{value || 'Not set'}</p>
-      <p className="text-sm text-primary-foreground/70 -mt-1">{label}</p>
+      <p className="font-bold text-lg">{value || 'Not set'}</p>
+      <p className="text-sm text-muted-foreground -mt-1">{label}</p>
     </div>
   </div>
 );
@@ -39,7 +39,7 @@ export default function ProfileCard({ user, userProfile, onEdit }: ProfileCardPr
         </Avatar>
       </div>
 
-      <Card className="bg-primary text-primary-foreground">
+      <Card>
         <CardContent className="p-6 space-y-6">
             <ProfileInfoRow icon={<UserIcon />} label="Name" value={user.displayName} />
             <ProfileInfoRow icon={<BookUser />} label="Enrollment No." value={userProfile?.enrollmentNumber} />
