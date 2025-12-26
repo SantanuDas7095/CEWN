@@ -2,7 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
+import { usePathname } from 'next/navigation';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, University, LogOut, LogIn, User as UserIcon } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAdmin } from "@/hooks/use-admin";
+import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -29,6 +31,7 @@ export function Header() {
   const { user, loading } = useUser();
   const { isAdmin } = useAdmin();
   const auth = useAuth();
+  const pathname = usePathname();
 
   const handleSignOut = async () => {
     if (auth) {
@@ -53,7 +56,10 @@ export function Header() {
             <Link
               key={label}
               href={href}
-              className="transition-colors hover:text-primary"
+              className={cn(
+                "transition-colors hover:text-primary",
+                pathname === href ? "text-primary font-bold" : "text-muted-foreground"
+              )}
               prefetch={false}
             >
               {label}
@@ -125,10 +131,13 @@ export function Header() {
                 </Link>
                 <nav className="grid gap-4">
                   {allNavLinks.map(({ href, label }) => (
-                    <Link
+                     <Link
                       key={label}
                       href={href}
-                      className="text-lg font-medium transition-colors hover:text-primary"
+                      className={cn(
+                        "text-lg font-medium transition-colors hover:text-primary",
+                        pathname === href ? "text-primary" : "text-muted-foreground"
+                      )}
                       prefetch={false}
                     >
                       {label}
