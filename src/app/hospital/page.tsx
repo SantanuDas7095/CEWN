@@ -99,7 +99,7 @@ export default function HospitalPage() {
 
   const appointmentForm = useForm<z.infer<typeof appointmentSchema>>({
     resolver: zodResolver(appointmentSchema),
-    values: {
+    defaultValues: {
       studentName: user?.displayName || "",
       enrollmentNumber: "",
       appointmentDate: new Date(),
