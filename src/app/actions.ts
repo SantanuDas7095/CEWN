@@ -2,12 +2,13 @@
 'use server';
 import { predictHealthRisks, type PredictHealthRisksInput, type PredictHealthRisksOutput } from '@/ai/flows/predict-health-risks';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import type { EmergencyReport, HospitalFeedback, MessFoodRating } from '@/lib/types';
 
 
 export async function getHealthPredictions(): Promise<{ success: boolean; data?: PredictHealthRisksOutput, error?: string }> {
   try {
+    const { firestore: db } = initializeFirebase();
     // In a real application, you would fetch this data from a database
     // For this demo, we are using mock data.
     const emergencyReportsSnap = await getDocs(collection(db, "emergencyReports"));
