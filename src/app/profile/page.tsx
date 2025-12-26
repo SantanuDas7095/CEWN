@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useUser, useAuth, useStorage, useFirestore } from '@/firebase';
 import { Header } from '@/components/common/header';
@@ -131,7 +131,7 @@ export default function ProfilePage() {
         photoURL: photoURL,
       });
 
-      const userProfileData: Omit<UserProfile, 'id' | 'email'> = {
+      const userProfileData: Omit<UserProfile, 'id' | 'email'> & { createdAt?: any } = {
         uid: user.uid,
         displayName: data.displayName,
         photoURL: photoURL,
@@ -139,10 +139,16 @@ export default function ProfilePage() {
         hostel: data.hostel || '',
         department: data.department || '',
         year: data.year || 0,
-        updatedAt: Timestamp.now(),
+        updatedAt: serverTimestamp(),
       };
-
+      
       const userDocRef = doc(db, 'userProfile', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        userProfileData.createdAt = serverTimestamp();
+      }
+
       setDoc(userDocRef, userProfileData, { merge: true })
         .catch(error => {
              const permissionError = new FirestorePermissionError({

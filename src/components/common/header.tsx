@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAdmin } from "@/hooks/use-admin";
 import { cn } from "@/lib/utils";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -29,6 +30,7 @@ const navLinks = [
 
 export function Header() {
   const { user, loading } = useUser();
+  const { userProfile } = useUserProfile();
   const { isAdmin } = useAdmin();
   const auth = useAuth();
   const pathname = usePathname();
@@ -84,6 +86,9 @@ export function Header() {
                       <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">{user.displayName || 'User'}</p>
                         <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                        {userProfile?.enrollmentNumber && (
+                           <p className="text-xs leading-none text-muted-foreground pt-1">{userProfile.enrollmentNumber}</p>
+                        )}
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
