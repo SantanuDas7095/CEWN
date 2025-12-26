@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useUser, useAuth, useStorage, useFirestore } from '@/firebase';
 import { Header } from '@/components/common/header';
@@ -18,12 +18,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, User as UserIcon } from 'lucide-react';
+import { Loader2, User as UserIcon, Pen, Check } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { UserProfile } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ProfileCard from './components/profile-card';
+import { useUserProfile } from '@/hooks/use-user-profile';
+
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -38,17 +41,19 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
   const { user, loading: userLoading } = useUser();
+  const { userProfile, loading: profileLoading } = useUserProfile();
   const auth = useAuth();
   const storage = useStorage();
   const db = useFirestore();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      displayName: user?.displayName || '',
+      displayName: '',
       enrollmentNumber: '',
       hostel: '',
       department: '',
@@ -58,37 +63,24 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (userLoading) return;
+    if (userLoading || profileLoading) return;
     if (!user || !db) {
         router.push('/login');
         return;
     }
+    
+    form.reset({
+        displayName: user.displayName || userProfile?.displayName || '',
+        enrollmentNumber: userProfile?.enrollmentNumber || '',
+        hostel: userProfile?.hostel || '',
+        department: userProfile?.department || '',
+        year: userProfile?.year || undefined,
+    });
 
-    const fetchUserProfile = async () => {
-        const userDocRef = doc(db, 'userProfile', user.uid);
-        const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-            const profile = docSnap.data() as UserProfile;
-            form.reset({
-                displayName: user.displayName || profile.displayName || '',
-                enrollmentNumber: profile.enrollmentNumber || '',
-                hostel: profile.hostel || '',
-                department: profile.department || '',
-                year: profile.year || undefined,
-            });
-        } else {
-             form.reset({
-                displayName: user.displayName || '',
-            });
-        }
-    };
-
-    fetchUserProfile();
-
-  }, [user, userLoading, db, router, form]);
+  }, [user, userProfile, userLoading, profileLoading, db, router, form]);
 
 
-  if (userLoading) {
+  if (userLoading || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -164,9 +156,9 @@ export default function ProfilePage() {
         title: 'Profile Updated',
         description: 'Your profile has been successfully updated.',
       });
-      // Force a reload of the user to get the new data
       await auth.currentUser.reload();
       router.refresh();
+      setIsEditing(false);
 
     } catch (error: any) {
       console.error('Error updating profile:', error);
@@ -182,11 +174,14 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-secondary">
       <Header />
-      <main className="flex-1 bg-secondary/50">
+      <main className="flex-1">
         <div className="container mx-auto max-w-2xl py-12 px-4 md:px-6">
-          <Card>
+          {!isEditing ? (
+             <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} />
+          ) : (
+            <Card>
             <CardHeader>
               <CardTitle className="text-2xl font-headline flex items-center gap-3">
                 <UserIcon className="h-6 w-6 text-primary" />
@@ -290,17 +285,26 @@ export default function ProfilePage() {
                     )}
                   />
 
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                  </Button>
+                  <div className="flex gap-4">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="mr-2 h-4 w-4" />
+                      )}
+                      Save Changes
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                  </div>
                 </form>
               </Form>
             </CardContent>
           </Card>
+          )}
         </div>
       </main>
       <Footer />
     </div>
   );
 }
+
