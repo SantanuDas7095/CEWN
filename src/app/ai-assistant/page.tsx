@@ -155,7 +155,6 @@ export default function AiAssistantPage() {
     if (!nutritionData || !user || !db || !storage) return;
     setIsSaving(true);
   
-    let photoUrl: string | undefined = undefined;
     const logData = {
       ...nutritionData,
       userId: user.uid,
@@ -163,11 +162,10 @@ export default function AiAssistantPage() {
       photoUrl: '', // Initialize photoUrl
     };
   
-    const processSave = () => {
-      // Corrected collection path
+    const processSave = (dataToSave: typeof logData) => {
       const nutritionLogsCol = collection(db, `userProfile/${user.uid}/nutritionLogs`);
   
-      addDoc(nutritionLogsCol, logData)
+      addDoc(nutritionLogsCol, dataToSave)
         .then(() => {
           toast({
             title: "Meal Saved!",
@@ -178,13 +176,12 @@ export default function AiAssistantPage() {
           const permissionError = new FirestorePermissionError({
             path: `userProfile/${user.uid}/nutritionLogs`,
             operation: 'create',
-            requestResourceData: logData,
+            requestResourceData: dataToSave,
           }, error);
           errorEmitter.emit('permission-error', permissionError);
-  
           toast({
             title: "Save Failed",
-            description: "Could not save your meal. This might be a permission issue. The error has been logged for debugging.",
+            description: "Could not save your meal. Check console for details.",
             variant: "destructive",
           });
         })
@@ -199,19 +196,19 @@ export default function AiAssistantPage() {
         .then(snapshot => getDownloadURL(snapshot.ref))
         .then(url => {
           logData.photoUrl = url;
-          processSave();
+          processSave(logData);
         })
         .catch(error => {
           console.error("Error uploading photo:", error);
           toast({
             title: "Photo Upload Failed",
-            description: "Could not upload your meal photo. The meal was not saved.",
+            description: "Could not upload your meal photo, but attempting to save nutrition data.",
             variant: "destructive",
           });
-          setIsSaving(false);
+          processSave(logData); // Attempt to save even if photo fails
         });
     } else {
-      processSave();
+      processSave(logData);
     }
   };
   
@@ -377,3 +374,5 @@ export default function AiAssistantPage() {
     </div>
   );
 }
+
+    
