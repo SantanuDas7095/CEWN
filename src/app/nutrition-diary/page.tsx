@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -36,7 +36,6 @@ export default function NutritionDiaryPage() {
       setLoading(true);
       setError(null);
       const logsCollection = collection(db, 'nutritionLogs');
-      // Simplified query to only filter by userId
       const q = query(
         logsCollection,
         where('userId', '==', user.uid)
@@ -46,7 +45,7 @@ export default function NutritionDiaryPage() {
         const querySnapshot = await getDocs(q);
         const logsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
         
-        // Sort and filter on the client
+        // Sort and filter on the client side
         const sortedLogs = logsData.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
         const today = new Date();
