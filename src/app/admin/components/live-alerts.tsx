@@ -42,7 +42,6 @@ export default function LiveAlerts() {
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
-        console.error("Error fetching live alerts:", error);
         setLoading(false);
     });
 

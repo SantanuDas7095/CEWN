@@ -42,7 +42,6 @@ export default function AppointmentsList() {
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
-        console.error("Error fetching appointments:", error);
         setLoading(false);
     });
 

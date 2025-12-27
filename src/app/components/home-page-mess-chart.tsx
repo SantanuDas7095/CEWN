@@ -84,7 +84,6 @@ export default function HomePageMessChart() {
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
-        console.error("Error fetching mess ratings for chart:", error);
         setLoading(false);
     });
 

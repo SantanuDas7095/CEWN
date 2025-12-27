@@ -53,7 +53,6 @@ export default function ResponseTimeChart() {
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
-        console.error("Error fetching hospital feedbacks:", error);
         setLoading(false);
     });
 
