@@ -96,6 +96,34 @@ export default function AiAssistantPage() {
     }
   };
 
+  const convertImageToJpeg = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = document.createElement('img');
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    return reject(new Error('Could not get canvas context.'));
+                }
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg', 0.9)); // Convert to JPEG with 90% quality
+            };
+            img.onerror = (error) => {
+                reject(new Error('Failed to load image for conversion.'));
+            };
+            img.src = event.target?.result as string;
+        };
+        reader.onerror = (error) => {
+            reject(new Error('Failed to read image file.'));
+        };
+        reader.readAsDataURL(file);
+    });
+  };
+
   const handleNutritionAnalysis = async () => {
     if (!mealPhoto || isAnalyzing) return;
     setIsAnalyzing(true);
@@ -103,17 +131,10 @@ export default function AiAssistantPage() {
     setNutritionError(null);
     
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(mealPhoto);
-      reader.onload = async () => {
-        const photoDataUri = reader.result as string;
-        const input: NutritionTrackerInput = { photoDataUri };
-        const result = await nutritionTracker(input);
-        setNutritionData(result);
-      };
-      reader.onerror = (error) => {
-         throw new Error("Failed to read the image file.");
-      }
+      const photoDataUri = await convertImageToJpeg(mealPhoto);
+      const input: NutritionTrackerInput = { photoDataUri };
+      const result = await nutritionTracker(input);
+      setNutritionData(result);
     } catch (error: any) {
       console.error("Nutrition analysis error:", error);
       setNutritionError(error.message || "Failed to analyze the image. Please try another one.");
@@ -276,3 +297,5 @@ export default function AiAssistantPage() {
     </div>
   );
 }
+
+    
