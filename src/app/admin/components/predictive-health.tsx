@@ -1,29 +1,72 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getHealthPredictions } from "@/app/actions";
+import { predictHealthRisks, type PredictHealthRisksInput, type PredictHealthRisksOutput } from "@/ai/flows/predict-health-risks";
 import { BrainCircuit, Loader, AlertTriangle, ShieldCheck } from "lucide-react";
-import type { PredictHealthRisksOutput } from "@/ai/flows/predict-health-risks";
 import { Badge } from "@/components/ui/badge";
+import { useFirestore } from "@/firebase";
+import { collection, onSnapshot } from "firebase/firestore";
+import type { EmergencyReport, HospitalFeedback, MessFoodRating } from "@/lib/types";
 
 export default function PredictiveHealth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [predictions, setPredictions] = useState<PredictHealthRisksOutput | null>(null);
+  const db = useFirestore();
+
+  const [emergencyReports, setEmergencyReports] = useState<EmergencyReport[]>([]);
+  const [hospitalFeedbacks, setHospitalFeedbacks] = useState<HospitalFeedback[]>([]);
+  const [messFoodRatings, setMessFoodRatings] = useState<MessFoodRating[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db) return;
+    setDataLoading(true);
+    
+    const unsubEmergency = onSnapshot(collection(db, "emergencyReports"), (snap) => {
+        setEmergencyReports(snap.docs.map(doc => ({ ...doc.data(), reportId: doc.id } as any)));
+    });
+
+    const unsubFeedback = onSnapshot(collection(db, "hospitalFeedbacks"), (snap) => {
+        setHospitalFeedbacks(snap.docs.map(doc => ({ ...doc.data(), feedbackId: doc.id } as any)));
+    });
+
+    const unsubRatings = onSnapshot(collection(db, "messFoodRatings"), (snap) => {
+        setMessFoodRatings(snap.docs.map(doc => ({ ...doc.data(), ratingId: doc.id } as any)));
+    });
+
+    Promise.all([new Promise(res => onSnapshot(collection(db, "emergencyReports"), res)), new Promise(res => onSnapshot(collection(db, "hospitalFeedbacks"), res)), new Promise(res => onSnapshot(collection(db, "messFoodRatings"), res))]).then(() => {
+        setDataLoading(false);
+    })
+
+    return () => {
+        unsubEmergency();
+        unsubFeedback();
+        unsubRatings();
+    }
+  }, [db]);
+
 
   const handleAnalysis = async () => {
     setLoading(true);
     setError(null);
     setPredictions(null);
-    const result = await getHealthPredictions();
-    if (result.success && result.data) {
-      setPredictions(result.data);
-    } else {
-      setError(result.error || "An unknown error occurred.");
+    try {
+        const input: PredictHealthRisksInput = {
+            emergencyReports,
+            hospitalFeedbacks,
+            messFoodRatings,
+        };
+        const result = await predictHealthRisks(input);
+        setPredictions(result);
+    } catch (error: any) {
+        console.error(error);
+        setError(error.message || 'Failed to get predictions. Please check the server logs.');
     }
     setLoading(false);
   };
@@ -49,17 +92,22 @@ export default function PredictiveHealth() {
           Predictive Health Risk Analysis
         </CardTitle>
         <CardDescription>
-          Use AI to analyze recent emergency, hospital, and mess data to identify potential health risks on campus. This uses mock data for demonstration.
+          Use AI to analyze real-time emergency, hospital, and mess data to identify potential health risks on campus.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex justify-center">
-          <Button onClick={handleAnalysis} disabled={loading} size="lg">
+          <Button onClick={handleAnalysis} disabled={loading || dataLoading} size="lg">
             {loading ? (
               <>
                 <Loader className="mr-2 h-4 w-4 animate-spin" />
                 Analyzing Data...
               </>
+            ) : dataLoading ? (
+                 <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Loading Real-time Data...
+                </>
             ) : (
               "Run AI Health Analysis"
             )}

@@ -6,6 +6,7 @@ import { initializeFirebase } from '@/firebase';
 import type { EmergencyReport, HospitalFeedback, MessFoodRating } from '@/lib/types';
 
 
+// This function is no longer used by the PredictiveHealth component but is kept for potential future use or reference.
 export async function getHealthPredictions(): Promise<{ success: boolean; data?: PredictHealthRisksOutput, error?: string }> {
   try {
     const { firestore: db } = initializeFirebase();
