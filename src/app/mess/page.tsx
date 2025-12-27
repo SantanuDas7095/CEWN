@@ -4,24 +4,33 @@ import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Soup, Star, AlertTriangle, Utensils } from "lucide-react";
+import { Soup, Star, AlertTriangle, Utensils, Camera, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { addDoc, collection, serverTimestamp, onSnapshot, query } from "firebase/firestore";
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore, useUser, useStorage } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import Image from "next/image";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { MessFoodRating } from "@/lib/types";
 
 export default function MessPage() {
   const [rating, setRating] = useState(3);
   const { toast } = useToast();
   const [weeklyScore, setWeeklyScore] = useState(0);
   const db = useFirestore();
+  const storage = useStorage();
   const { user, loading } = useUser();
   const router = useRouter();
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
     if (!loading && !user) {
@@ -53,47 +62,79 @@ export default function MessPage() {
     return () => unsubscribe();
   }, [db])
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setPhoto(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPhotoPreview(null);
+    }
+  };
+
   const handleSubmit = async (isSick: 'yes' | 'no') => {
-    if (!user || !db) {
+    if (!user || !db || !storage) {
         toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
         return;
     }
+    setIsSubmitting(true);
 
-    const ratingData = {
-        studentId: user.uid,
-        foodQualityRating: rating,
-        sickAfterMealReport: isSick,
-        timestamp: serverTimestamp(),
-    };
+    let imageUrl: string | undefined = undefined;
 
-    addDoc(collection(db, "messFoodRatings"), ratingData)
-        .then(() => {
-            if (isSick === 'yes') {
-                toast({
-                    title: "Sickness Reported",
-                    description: "Your report has been sent. Please visit the hospital if you feel unwell.",
-                    variant: "destructive",
-                });
-            } else {
-                toast({
-                    title: "Rating Submitted",
-                    description: `You rated today's food ${rating} out of 5. Thank you!`,
-                });
-            }
-        })
-        .catch(error => {
-            const permissionError = new FirestorePermissionError({
-                path: 'messFoodRatings',
-                operation: 'create',
-                requestResourceData: ratingData,
-            }, error);
-            errorEmitter.emit('permission-error', permissionError);
+    try {
+        if (photo) {
+            const photoRef = ref(storage, `mess-photos/${user.uid}/${Date.now()}_${photo.name}`);
+            const snapshot = await uploadBytes(photoRef, photo);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
+
+        const ratingData: Omit<MessFoodRating, 'id'> = {
+            studentId: user.uid,
+            foodQualityRating: rating,
+            sickAfterMealReport: isSick,
+            timestamp: serverTimestamp(),
+            ...(imageUrl && { imageUrl }),
+        };
+
+        await addDoc(collection(db, "messFoodRatings"), ratingData);
+
+        if (isSick === 'yes') {
             toast({
-                title: "Error",
-                description: "Could not submit your report. Please try again.",
+                title: "Sickness Reported",
+                description: "Your report has been sent. Please visit the hospital if you feel unwell.",
                 variant: "destructive",
             });
+        } else {
+            toast({
+                title: "Rating Submitted",
+                description: `You rated today's food ${rating} out of 5. Thank you!`,
+            });
+        }
+        // Reset form state
+        setRating(3);
+        setPhoto(null);
+        setPhotoPreview(null);
+
+    } catch (error) {
+        console.error("Error submitting rating:", error);
+        const permissionError = new FirestorePermissionError({
+            path: 'messFoodRatings',
+            operation: 'create',
+            requestResourceData: { foodQualityRating: rating, sickAfterMealReport: isSick, hasPhoto: !!photo },
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            title: "Error",
+            description: "Could not submit your report. Please try again.",
+            variant: "destructive",
         });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   if (loading || !user) {
@@ -148,9 +189,28 @@ export default function MessPage() {
                   className="w-full"
                 />
                 <span className="text-2xl font-bold">{rating}/5</span>
+
+                <div className="w-full space-y-2">
+                    <Label htmlFor="photo-upload" className="flex items-center gap-2 cursor-pointer text-muted-foreground">
+                        <Camera className="h-4 w-4" />
+                        <span>Upload a photo (optional)</span>
+                    </Label>
+                    <Input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoChange} className="text-sm"/>
+                    {photoPreview && (
+                        <div className="relative mt-2">
+                            <Image src={photoPreview} alt="Meal preview" width={100} height={100} className="rounded-md object-cover w-full h-auto max-h-48" />
+                            <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/75 text-white rounded-full" onClick={() => { setPhoto(null); setPhotoPreview(null); }}>
+                                <X className="h-4 w-4"/>
+                            </Button>
+                        </div>
+                    )}
+                </div>
+
               </CardContent>
               <div className="p-6 pt-0">
-                <Button onClick={() => handleSubmit('no')} className="w-full">Submit Rating</Button>
+                <Button onClick={() => handleSubmit('no')} className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? 'Submitting...' : 'Submit Rating'}
+                </Button>
               </div>
             </Card>
 
@@ -164,8 +224,9 @@ export default function MessPage() {
                         <CardDescription>If you feel sick after a meal, report it immediately.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={() => handleSubmit('yes')} variant="destructive" className="w-full text-lg py-6">
-                            <AlertTriangle className="mr-2 h-5 w-5" /> Report Sickness
+                        <Button onClick={() => handleSubmit('yes')} variant="destructive" className="w-full text-lg py-6" disabled={isSubmitting}>
+                            <AlertTriangle className="mr-2 h-5 w-5" /> 
+                            {isSubmitting ? 'Reporting...' : 'Report Sickness'}
                         </Button>
                     </CardContent>
                 </Card>

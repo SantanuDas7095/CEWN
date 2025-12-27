@@ -27,6 +27,7 @@ export type MessFoodRating = {
     foodQualityRating: number;
     sickAfterMealReport: 'yes' | 'no';
     timestamp: Timestamp;
+    imageUrl?: string;
 };
 
 export type Appointment = {
