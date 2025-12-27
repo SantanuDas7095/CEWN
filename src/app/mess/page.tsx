@@ -53,8 +53,8 @@ export default function MessPage() {
     setScoreLoading(true);
 
     let ratingsQuery;
-    if (selectedMess) {
-        ratingsQuery = query(collection(db, "messFoodRatings"), where("messName", "==", selectedMess));
+    if (selectedMeal) {
+        ratingsQuery = query(collection(db, "messFoodRatings"), where("mealType", "==", selectedMeal));
     } else {
         ratingsQuery = query(collection(db, "messFoodRatings"));
     }
@@ -80,7 +80,7 @@ export default function MessPage() {
     });
 
     return () => unsubscribe();
-  }, [db, selectedMess])
+  }, [db, selectedMeal])
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -292,8 +292,8 @@ export default function MessPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="font-headline">{selectedMess ? `${selectedMess} Scorecard` : 'Overall Hygiene Scorecard'}</CardTitle>
-                        <CardDescription>An aggregated score based on student ratings.</CardDescription>
+                        <CardTitle className="font-headline">{selectedMeal ? `${selectedMeal} Scorecard` : 'Overall Hygiene Scorecard'}</CardTitle>
+                        <CardDescription>An aggregated score based on student ratings for the selected meal.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {scoreLoading ? (
@@ -308,11 +308,11 @@ export default function MessPage() {
                         ) : (
                             <>
                                 <div className="flex justify-between items-baseline">
-                                <span className="font-medium">{selectedMess ? 'Average Score' : 'Overall Score'}</span>
+                                <span className="font-medium">{selectedMeal ? 'Average Score' : 'Overall Score'}</span>
                                 <span className="text-3xl font-bold text-primary">{weeklyScore}%</span>
                                 </div>
                                 <Progress value={weeklyScore} className="h-4" />
-                                <p className="text-xs text-muted-foreground">This score reflects all available historical data.</p>
+                                <p className="text-xs text-muted-foreground">This score reflects all available historical data for the selected meal.</p>
                             </>
                         )}
                     </CardContent>
