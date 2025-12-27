@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { addDoc, collection, serverTimestamp, onSnapshot, query, where } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, where, QueryConstraint } from "firebase/firestore";
 import { useFirestore, useUser, useStorage } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -52,12 +52,15 @@ export default function MessPage() {
     if (!db) return;
     setScoreLoading(true);
 
-    let ratingsQuery;
-    if (selectedMeal) {
-        ratingsQuery = query(collection(db, "messFoodRatings"), where("mealType", "==", selectedMeal));
-    } else {
-        ratingsQuery = query(collection(db, "messFoodRatings"));
+    const constraints: QueryConstraint[] = [];
+    if (selectedMess) {
+        constraints.push(where("messName", "==", selectedMess));
     }
+    if (selectedMeal) {
+        constraints.push(where("mealType", "==", selectedMeal));
+    }
+
+    const ratingsQuery = query(collection(db, "messFoodRatings"), ...constraints);
 
     const unsubscribe = onSnapshot(ratingsQuery, (querySnapshot) => {
       if(querySnapshot.empty) {
@@ -80,7 +83,7 @@ export default function MessPage() {
     });
 
     return () => unsubscribe();
-  }, [db, selectedMeal])
+  }, [db, selectedMess, selectedMeal])
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -162,6 +165,13 @@ export default function MessPage() {
   };
   
   const currentMealOptions = selectedMess === "Gargi hostel mess" ? [...meals, "Snacks"] : meals;
+
+  const getScorecardTitle = () => {
+    if (selectedMess && selectedMeal) return `${selectedMess} - ${selectedMeal} Score`;
+    if (selectedMess) return `${selectedMess} Score`;
+    if (selectedMeal) return `${selectedMeal} Score`;
+    return 'Overall Hygiene Scorecard';
+  }
 
   if (loading || !user) {
     return (
@@ -292,8 +302,8 @@ export default function MessPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="font-headline">{selectedMeal ? `${selectedMeal} Scorecard` : 'Overall Hygiene Scorecard'}</CardTitle>
-                        <CardDescription>An aggregated score based on student ratings for the selected meal.</CardDescription>
+                        <CardTitle className="font-headline">{getScorecardTitle()}</CardTitle>
+                        <CardDescription>An aggregated score based on student ratings.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {scoreLoading ? (
@@ -308,11 +318,11 @@ export default function MessPage() {
                         ) : (
                             <>
                                 <div className="flex justify-between items-baseline">
-                                <span className="font-medium">{selectedMeal ? 'Average Score' : 'Overall Score'}</span>
+                                <span className="font-medium">Average Score</span>
                                 <span className="text-3xl font-bold text-primary">{weeklyScore}%</span>
                                 </div>
                                 <Progress value={weeklyScore} className="h-4" />
-                                <p className="text-xs text-muted-foreground">This score reflects all available historical data for the selected meal.</p>
+                                <p className="text-xs text-muted-foreground">This score reflects all available historical data for the selection.</p>
                             </>
                         )}
                     </CardContent>
@@ -325,3 +335,5 @@ export default function MessPage() {
     </div>
   );
 }
+
+    
