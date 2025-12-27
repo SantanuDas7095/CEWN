@@ -10,7 +10,7 @@ import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { ArrowRight, HeartPulse, Shield, Soup, LayoutDashboard, Utensils } from "lucide-react";
 import { useAdmin } from "@/hooks/use-admin";
-import DailyMessRating from "./components/daily-mess-rating";
+import HomePageMessChart from "./components/home-page-mess-chart";
 
 const featureCards = [
   {
@@ -81,7 +81,7 @@ export default function Home() {
                 Solving real problems with a connected, transparent, and accountable system.
               </p>
             </div>
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
+            <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-2">
               {featureCards.map((feature) => (
                 <Card key={feature.title} className="flex flex-col overflow-hidden transition-all hover:shadow-xl">
                   {feature.image && (
@@ -113,7 +113,7 @@ export default function Home() {
                   </div>
                 </Card>
               ))}
-               <Card className="flex flex-col overflow-hidden transition-all hover:shadow-xl md:col-span-2 lg:col-span-2">
+               <Card className="flex flex-col overflow-hidden transition-all hover:shadow-xl md:col-span-1 lg:col-span-2">
                  {todaysReviewImage && (
                      <div className="w-full h-48 relative">
                       <Image
@@ -130,19 +130,12 @@ export default function Home() {
                     <Utensils className="h-8 w-8 text-accent" />
                   </div>
                   <div className="flex-grow">
-                    <CardTitle className="font-headline">Today's Mess Food Review</CardTitle>
+                    <CardTitle className="font-headline">Mess Food Hygiene Trends</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <DailyMessRating />
+                  <HomePageMessChart />
                 </CardContent>
-                 <div className="p-6 pt-0">
-                    <Button asChild variant="outline" className="w-full">
-                      <Link href="/mess">
-                        Rate Now <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
               </Card>
             </div>
           </div>
