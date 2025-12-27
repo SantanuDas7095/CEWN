@@ -24,6 +24,8 @@ export type HospitalFeedback = {
 export type MessFoodRating = {
     id?: string;
     studentId: string;
+    messName: string;
+    mealType: string;
     foodQualityRating: number;
     sickAfterMealReport: 'yes' | 'no';
     timestamp: Timestamp;

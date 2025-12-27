@@ -19,6 +19,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { MessFoodRating } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
+const meals = ["Breakfast", "Lunch", "Dinner"];
 
 export default function MessPage() {
   const [rating, setRating] = useState(3);
@@ -31,7 +35,9 @@ export default function MessPage() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [selectedMess, setSelectedMess] = useState<string>("");
+  const [selectedMeal, setSelectedMeal] = useState<string>("");
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -77,8 +83,8 @@ export default function MessPage() {
   };
 
   const handleSubmit = async (isSick: 'yes' | 'no') => {
-    if (!user || !db || !storage) {
-        toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
+    if (!user || !db || !storage || !selectedMess || !selectedMeal) {
+        toast({ title: "Incomplete Form", description: "Please select a mess and a meal before submitting.", variant: "destructive" });
         return;
     }
     setIsSubmitting(true);
@@ -94,6 +100,8 @@ export default function MessPage() {
 
         const ratingData: Omit<MessFoodRating, 'id'> = {
             studentId: user.uid,
+            messName: selectedMess,
+            mealType: selectedMeal,
             foodQualityRating: rating,
             sickAfterMealReport: isSick,
             timestamp: serverTimestamp(),
@@ -116,6 +124,8 @@ export default function MessPage() {
         }
         // Reset form state
         setRating(3);
+        setSelectedMess("");
+        setSelectedMeal("");
         setPhoto(null);
         setPhotoPreview(null);
 
@@ -124,7 +134,7 @@ export default function MessPage() {
         const permissionError = new FirestorePermissionError({
             path: 'messFoodRatings',
             operation: 'create',
-            requestResourceData: { foodQualityRating: rating, sickAfterMealReport: isSick, hasPhoto: !!photo },
+            requestResourceData: { foodQualityRating: rating, sickAfterMealReport: isSick, hasPhoto: !!photo, messName: selectedMess, mealType: selectedMeal },
         }, error);
         errorEmitter.emit('permission-error', permissionError);
         toast({
@@ -136,6 +146,8 @@ export default function MessPage() {
         setIsSubmitting(false);
     }
   };
+  
+  const currentMealOptions = selectedMess === "Gargi hostel mess" ? [...meals, "Snacks"] : meals;
 
   if (loading || !user) {
     return (
@@ -168,27 +180,60 @@ export default function MessPage() {
                 <CardDescription>Rate the overall quality of today's meals.</CardDescription>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-center items-center space-y-6">
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-10 w-10 cursor-pointer transition-colors ${
-                        star <= rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-                      }`}
-                      onClick={() => setRating(star)}
-                    />
-                  ))}
+                
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Select Mess</Label>
+                        <Select onValueChange={setSelectedMess} value={selectedMess}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose a mess" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {messes.map(mess => (
+                                    <SelectItem key={mess} value={mess}>{mess}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Select Meal</Label>
+                        <Select onValueChange={setSelectedMeal} value={selectedMeal} disabled={!selectedMess}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose a meal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {currentMealOptions.map(meal => (
+                                    <SelectItem key={meal} value={meal}>{meal}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-                <Slider
-                  defaultValue={[3]}
-                  value={[rating]}
-                  max={5}
-                  min={1}
-                  step={1}
-                  onValueChange={(value) => setRating(value[0])}
-                  className="w-full"
-                />
-                <span className="text-2xl font-bold">{rating}/5</span>
+
+                <div className="w-full space-y-2 pt-4">
+                    <Label className="text-center block">Your Rating: <span className="text-2xl font-bold">{rating}/5</span></Label>
+                    <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                        key={star}
+                        className={`h-10 w-10 mx-auto cursor-pointer transition-colors ${
+                            star <= rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
+                        }`}
+                        onClick={() => setRating(star)}
+                        />
+                    ))}
+                    </div>
+                    <Slider
+                    defaultValue={[3]}
+                    value={[rating]}
+                    max={5}
+                    min={1}
+                    step={1}
+                    onValueChange={(value) => setRating(value[0])}
+                    className="w-full"
+                    />
+                </div>
+                
 
                 <div className="w-full space-y-2">
                     <Label htmlFor="photo-upload" className="flex items-center gap-2 cursor-pointer text-muted-foreground">
@@ -208,7 +253,7 @@ export default function MessPage() {
 
               </CardContent>
               <div className="p-6 pt-0">
-                <Button onClick={() => handleSubmit('no')} className="w-full" disabled={isSubmitting}>
+                <Button onClick={() => handleSubmit('no')} className="w-full" disabled={isSubmitting || !selectedMess || !selectedMeal}>
                     {isSubmitting ? 'Submitting...' : 'Submit Rating'}
                 </Button>
               </div>
@@ -221,10 +266,10 @@ export default function MessPage() {
                         <AlertTriangle className="text-accent" />
                         Feeling Unwell?
                         </CardTitle>
-                        <CardDescription>If you feel sick after a meal, report it immediately.</CardDescription>
+                        <CardDescription>If you feel sick after a meal, report it immediately. Select mess and meal first.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={() => handleSubmit('yes')} variant="destructive" className="w-full text-lg py-6" disabled={isSubmitting}>
+                        <Button onClick={() => handleSubmit('yes')} variant="destructive" className="w-full text-lg py-6" disabled={isSubmitting || !selectedMess || !selectedMeal}>
                             <AlertTriangle className="mr-2 h-5 w-5" /> 
                             {isSubmitting ? 'Reporting...' : 'Report Sickness'}
                         </Button>

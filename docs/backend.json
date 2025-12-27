@@ -36,12 +36,14 @@
       "type": "object",
       "properties": {
         "studentId": { "type": "string", "description": "The ID of the student giving the rating." },
+        "messName": { "type": "string", "description": "The name of the mess being rated.", "enum": ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"] },
+        "mealType": { "type": "string", "description": "The type of meal being rated.", "enum": ["Breakfast", "Lunch", "Dinner", "Snacks"] },
         "foodQualityRating": { "type": "number", "description": "A rating from 1 to 5." },
         "sickAfterMealReport": { "type": "string", "enum": ["yes", "no"] },
         "timestamp": { "type": "string", "format": "date-time" },
         "imageUrl": { "type": "string", "format": "uri", "description": "URL of an optional photo of the meal." }
       },
-      "required": ["studentId", "foodQualityRating", "sickAfterMealReport", "timestamp"]
+      "required": ["studentId", "messName", "mealType", "foodQualityRating", "sickAfterMealReport", "timestamp"]
     },
     "Appointment": {
       "title": "Appointment",
