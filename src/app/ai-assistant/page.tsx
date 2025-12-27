@@ -154,14 +154,10 @@ export default function AiAssistantPage() {
   const handleSaveToDiary = async () => {
     if (!nutritionData || !user || !db || !storage) return;
     setIsSaving(true);
-    try {
-      let photoUrl: string | undefined;
-      if (mealPhoto) {
-        const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
-        const snapshot = await uploadBytes(photoRef, mealPhoto);
-        photoUrl = await getDownloadURL(snapshot.ref);
-      }
+    
+    let photoUrl: string | undefined;
 
+    const processSave = (photoUrl?: string) => {
       const logData = {
         ...nutritionData,
         userId: user.uid,
@@ -170,28 +166,49 @@ export default function AiAssistantPage() {
       };
 
       const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
-      await addDoc(nutritionLogsCol, logData);
-
-      toast({
-        title: "Meal Saved!",
-        description: "Your meal has been added to your nutrition diary.",
-      });
-
-    } catch (error) {
-        console.error("Error saving to diary:", error);
-        const permissionError = new FirestorePermissionError({
-            path: `users/${user.uid}/nutritionLogs`,
-            operation: 'create',
-            requestResourceData: { hasPhoto: !!mealPhoto },
-        }, error);
-        errorEmitter.emit('permission-error', permissionError);
-        toast({
-            title: "Save Failed",
-            description: "Could not save your meal to the diary. Please try again.",
-            variant: "destructive",
+      
+      addDoc(nutritionLogsCol, logData)
+        .then(() => {
+          toast({
+            title: "Meal Saved!",
+            description: "Your meal has been added to your nutrition diary.",
+          });
+        })
+        .catch((error) => {
+          console.error("Error saving to diary:", error);
+          const permissionError = new FirestorePermissionError({
+              path: `users/${user.uid}/nutritionLogs`,
+              operation: 'create',
+              requestResourceData: logData,
+          }, error);
+          errorEmitter.emit('permission-error', permissionError);
+          toast({
+              title: "Save Failed",
+              description: "Could not save your meal to the diary. Please check permissions and try again.",
+              variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setIsSaving(false);
         });
-    } finally {
-        setIsSaving(false);
+    };
+
+    if (mealPhoto) {
+      const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
+      uploadBytes(photoRef, mealPhoto)
+        .then(snapshot => getDownloadURL(snapshot.ref))
+        .then(url => processSave(url))
+        .catch(error => {
+          console.error("Error uploading photo:", error);
+           toast({
+              title: "Photo Upload Failed",
+              description: "Could not upload your meal photo. Please try again.",
+              variant: "destructive",
+          });
+          setIsSaving(false);
+        });
+    } else {
+      processSave();
     }
   };
   
@@ -357,3 +374,5 @@ export default function AiAssistantPage() {
     </div>
   );
 }
+
+    
