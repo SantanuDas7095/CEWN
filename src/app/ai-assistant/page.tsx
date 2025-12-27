@@ -154,35 +154,24 @@ export default function AiAssistantPage() {
   const handleSaveToDiary = async () => {
     if (!nutritionData || !user || !db || !storage) return;
     setIsSaving(true);
-    
+
+    const logData = {
+        ...nutritionData,
+        userId: user.uid,
+        timestamp: serverTimestamp(),
+        photoUrl: '', // Initialize photoUrl
+    };
+
     try {
-        let photoUrl: string | undefined = undefined;
         if (mealPhoto) {
             const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
             const snapshot = await uploadBytes(photoRef, mealPhoto);
-            photoUrl = await getDownloadURL(snapshot.ref);
+            logData.photoUrl = await getDownloadURL(snapshot.ref);
         }
-
-        const logData = {
-            ...nutritionData,
-            userId: user.uid,
-            timestamp: serverTimestamp(),
-            ...(photoUrl && { photoUrl }),
-        };
 
         const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
         
-        await addDoc(nutritionLogsCol, logData)
-          .catch((error) => {
-            console.error("Error saving to diary:", error);
-            const permissionError = new FirestorePermissionError({
-                path: `users/${user.uid}/nutritionLogs`,
-                operation: 'create',
-                requestResourceData: logData,
-            }, error);
-            errorEmitter.emit('permission-error', permissionError);
-            throw error; // re-throw to be caught by the outer try/catch
-          });
+        await addDoc(nutritionLogsCol, logData);
 
         toast({
             title: "Meal Saved!",
@@ -190,6 +179,19 @@ export default function AiAssistantPage() {
         });
 
     } catch (error) {
+        console.error("Error saving to diary:", error);
+        
+        // This is the important part for debugging.
+        // It creates a detailed error object and emits it.
+        // The FirebaseErrorListener will catch this and display it in the Next.js overlay in development.
+        const permissionError = new FirestorePermissionError({
+            path: `users/${user.uid}/nutritionLogs`,
+            operation: 'create',
+            requestResourceData: logData, // Pass the actual data being sent
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+
+        // Show a user-friendly message
         toast({
             title: "Save Failed",
             description: "Could not save your meal to the diary. Please check permissions and try again.",
