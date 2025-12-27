@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
-import { ArrowRight, HeartPulse, Shield, Soup, LayoutDashboard, Utensils } from "lucide-react";
+import { ArrowRight, HeartPulse, Shield, Soup, LayoutDashboard, Utensils, BrainCircuit } from "lucide-react";
 import { useAdmin } from "@/hooks/use-admin";
 import HomePageMessChart from "./components/home-page-mess-chart";
 
@@ -33,6 +33,13 @@ const featureCards = [
     description: "Rate daily meals and report sickness to ensure food safety and quality.",
     link: "/mess",
     image: PlaceHolderImages.find(img => img.id === 'mess-food'),
+  },
+  {
+    icon: <BrainCircuit className="h-8 w-8 text-accent" />,
+    title: "AI Health Assistant",
+    description: "Chat for first-aid advice and track your meal's nutrition with a photo.",
+    link: "/ai-assistant",
+    image: PlaceHolderImages.find(img => img.id === 'ai-assistant'),
   },
 ];
 

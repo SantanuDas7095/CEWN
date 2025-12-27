@@ -36,6 +36,12 @@
       "description": "An image showing a plate of food being rated.",
       "imageUrl": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=600&q=80",
       "imageHint": "food rating"
+    },
+    {
+      "id": "ai-assistant",
+      "description": "An image representing an AI assistant or chatbot.",
+      "imageUrl": "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
+      "imageHint": "AI assistant"
     }
   ]
 }
