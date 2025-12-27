@@ -12,7 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const NutritionTrackerInputSchema = z.object({
+const NutritionTrackerInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
@@ -21,7 +21,7 @@ export const NutritionTrackerInputSchema = z.object({
 });
 export type NutritionTrackerInput = z.infer<typeof NutritionTrackerInputSchema>;
 
-export const NutritionTrackerOutputSchema = z.object({
+const NutritionTrackerOutputSchema = z.object({
   calories: z.number().describe('Estimated total calories.'),
   proteinGrams: z.number().describe('Estimated grams of protein.'),
   carbsGrams: z.number().describe('Estimated grams of carbohydrates.'),

@@ -12,18 +12,18 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const FirstAidMessageSchema = z.object({
+const FirstAidMessageSchema = z.object({
   role: z.enum(['user', 'model']),
   content: z.string(),
 });
 export type FirstAidMessage = z.infer<typeof FirstAidMessageSchema>;
 
-export const FirstAidChatInputSchema = z.object({
+const FirstAidChatInputSchema = z.object({
   history: z.array(FirstAidMessageSchema).describe('The chat history so far.'),
 });
 export type FirstAidChatInput = z.infer<typeof FirstAidChatInputSchema>;
 
-export const FirstAidChatOutputSchema = z.object({
+const FirstAidChatOutputSchema = z.object({
     response: z.string().describe("The AI's response to the user's query."),
 });
 export type FirstAidChatOutput = z.infer<typeof FirstAidChatOutputSchema>;

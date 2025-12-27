@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { firstAidChat, type FirstAidChatInput, type FirstAidMessage } from '@/ai/flows/first-aid-flow';
 import { nutritionTracker, type NutritionTrackerInput, type NutritionTrackerOutput } from '@/ai/flows/nutrition-tracker-flow';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar } from '@/components/ui/avatar';
 
 export default function AiAssistantPage() {
   const { user, loading } = useUser();
