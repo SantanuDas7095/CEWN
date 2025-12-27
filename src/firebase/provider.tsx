@@ -30,8 +30,8 @@ export function FirebaseProvider({
 }) {
   return (
     <FirebaseContext.Provider value={{ firebaseApp, firestore, auth, storage }}>
-      {children}
       <FirebaseErrorListener />
+      {children}
     </FirebaseContext.Provider>
   );
 }
