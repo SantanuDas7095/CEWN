@@ -38,7 +38,6 @@ export function useUserProfile() {
         setLoading(false);
       }, 
       (error) => {
-        console.error("Error fetching user profile:", error);
         const permissionError = new FirestorePermissionError({
             path: userDocRef.path,
             operation: 'get',
