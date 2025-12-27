@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { BookCopy, Loader, Salad } from 'lucide-react';
 import type { DailyNutritionLog } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { startOfDay, endOfDay, format } from 'date-fns';
+import { isToday, format } from 'date-fns';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -33,20 +33,18 @@ export default function NutritionDiaryPage() {
     if (!user || !db) return;
 
     setLoading(true);
-    const todayStart = startOfDay(new Date());
-    const todayEnd = endOfDay(new Date());
-
+    
     const logsCollection = collection(db, "nutritionLogs");
     const q = query(
       logsCollection,
       where('userId', '==', user.uid),
-      where('timestamp', '>=', todayStart),
-      where('timestamp', '<=', todayEnd),
       orderBy('timestamp', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
+      const logsData = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog))
+        .filter(log => log.timestamp && isToday(log.timestamp.toDate())); // Filter for today on the client
       setLogs(logsData);
       setLoading(false);
     }, (error) => {
@@ -55,7 +53,6 @@ export default function NutritionDiaryPage() {
         operation: 'list',
       }, error);
       errorEmitter.emit('permission-error', permissionError);
-      console.error("Error fetching nutrition logs:", error);
       setLoading(false);
     });
 

@@ -25,7 +25,7 @@ service cloud.firestore {
     match /nutritionLogs/{logId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow get: if request.auth != null && get(/databases/$(database)/documents/nutritionLogs/$(logId)).data.userId == request.auth.uid;
-      allow list: if request.auth != null && request.query.where.userId == request.auth.uid && request.query.where.timestamp != null;
+      allow list: if request.auth != null && request.query.where.userId == request.auth.uid;
     }
 
     match /emergencyReports/{reportId} {
