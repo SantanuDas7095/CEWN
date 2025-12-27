@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, University, LogOut, LogIn, User as UserIcon } from "lucide-react";
+import { Menu, University, LogOut, LogIn, User as UserIcon, BookCopy } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -97,6 +97,12 @@ export function Header() {
                       <Link href="/profile">
                         <UserIcon className="mr-2 h-4 w-4" />
                         <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/nutrition-diary">
+                        <BookCopy className="mr-2 h-4 w-4" />
+                        <span>Nutrition Diary</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

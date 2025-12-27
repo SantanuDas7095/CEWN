@@ -56,3 +56,14 @@ export type UserProfile = {
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
 }
+
+export type DailyNutritionLog = {
+    id: string;
+    userId: string;
+    timestamp: Timestamp;
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatGrams: number;
+    photoUrl?: string;
+}

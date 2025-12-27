@@ -111,6 +111,21 @@
         "carbsGrams": { "type": "number" },
         "fatGrams": { "type": "number" }
       }
+    },
+    "DailyNutritionLog": {
+        "title": "Daily Nutrition Log",
+        "description": "A log of a user's nutritional intake for a single meal.",
+        "type": "object",
+        "properties": {
+            "userId": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "calories": { "type": "number" },
+            "proteinGrams": { "type": "number" },
+            "carbsGrams": { "type": "number" },
+            "fatGrams": { "type": "number" },
+            "photoUrl": { "type": "string", "format": "uri" }
+        },
+        "required": ["userId", "timestamp", "calories", "proteinGrams", "carbsGrams", "fatGrams"]
     }
   },
   "auth": {
@@ -140,6 +155,10 @@
     "/roles_admin/{userId}": {
         "schema": { "$ref": "#/entities/AdminRole" },
         "description": "A collection where the document ID is the UID of an admin user."
+    },
+    "/users/{userId}/nutritionLogs/{logId}": {
+        "schema": { "$ref": "#/entities/DailyNutritionLog" },
+        "description": "Stores a user's daily nutrition logs."
     }
   }
 }

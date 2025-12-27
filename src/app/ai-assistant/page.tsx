@@ -9,21 +9,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera, HeartPulse, Loader, Send, Sparkles, User, X, Salad, AlertCircle } from 'lucide-react';
+import { Camera, HeartPulse, Loader, Send, Sparkles, User, X, Salad, AlertCircle, Plus, BookCopy } from 'lucide-react';
 import Image from 'next/image';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useStorage } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { firstAidChat, type FirstAidChatInput, type FirstAidMessage } from '@/ai/flows/first-aid-flow';
 import { nutritionTracker, type NutritionTrackerInput, type NutritionTrackerOutput } from '@/ai/flows/nutrition-tracker-flow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar } from '@/components/ui/avatar';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AiAssistantPage() {
   const { user, loading } = useUser();
+  const db = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
+  const { toast } = useToast();
 
   // State for First-Aid Chat
   const [chatMessages, setChatMessages] = useState<FirstAidMessage[]>([]);
@@ -36,6 +43,7 @@ export default function AiAssistantPage() {
   const [mealPhotoPreview, setMealPhotoPreview] = useState<string | null>(null);
   const [nutritionData, setNutritionData] = useState<NutritionTrackerOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [nutritionError, setNutritionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -140,6 +148,47 @@ export default function AiAssistantPage() {
       setNutritionError(error.message || "Failed to analyze the image. Please try another one.");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleSaveToDiary = async () => {
+    if (!nutritionData || !mealPhoto || !user || !db || !storage) return;
+    setIsSaving(true);
+    try {
+        const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
+        const snapshot = await uploadBytes(photoRef, mealPhoto);
+        const photoUrl = await getDownloadURL(snapshot.ref);
+
+        const logData = {
+            ...nutritionData,
+            userId: user.uid,
+            timestamp: serverTimestamp(),
+            photoUrl: photoUrl
+        };
+        
+        const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
+        await addDoc(nutritionLogsCol, logData);
+
+        toast({
+            title: "Meal Saved!",
+            description: "Your meal has been added to your nutrition diary.",
+        });
+
+    } catch (error) {
+        console.error("Error saving to diary:", error);
+        const permissionError = new FirestorePermissionError({
+            path: `users/${user.uid}/nutritionLogs`,
+            operation: 'create',
+            requestResourceData: { hasPhoto: !!mealPhoto },
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            title: "Save Failed",
+            description: "Could not save your meal to the diary. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsSaving(false);
     }
   };
   
@@ -284,6 +333,14 @@ export default function AiAssistantPage() {
                                 <p className="text-2xl font-bold">{nutritionData.fatGrams.toFixed(1)}g</p>
                             </Card>
                         </div>
+                        <div className="flex justify-center gap-4">
+                            <Button onClick={handleSaveToDiary} disabled={isSaving}>
+                                {isSaving ? <><Loader className="mr-2 animate-spin" /> Saving...</> : <><Plus className="mr-2"/> Save to Diary</>}
+                            </Button>
+                            <Button variant="outline" onClick={() => router.push('/nutrition-diary')}>
+                                <BookCopy className="mr-2"/> View Diary
+                            </Button>
+                        </div>
                      </div>
                   )}
 
@@ -297,5 +354,3 @@ export default function AiAssistantPage() {
     </div>
   );
 }
-
-    

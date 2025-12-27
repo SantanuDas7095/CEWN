@@ -22,6 +22,10 @@ service cloud.firestore {
         allow get, list: if isAdmin();
     }
 
+    match /users/{userId}/nutritionLogs/{logId} {
+        allow read, create: if isOwner(userId);
+    }
+
     // Temporarily allow any authenticated user to read/write to collections
     // to resolve persistent permission errors on the admin dashboard.
     // THIS IS NOT A SECURE RULESET FOR PRODUCTION.
