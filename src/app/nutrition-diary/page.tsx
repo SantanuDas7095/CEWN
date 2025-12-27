@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -36,17 +36,18 @@ export default function NutritionDiaryPage() {
       setLoading(true);
       setError(null);
       const logsCollection = collection(db, 'nutritionLogs');
-      const q = query(
-        logsCollection,
-        where('userId', '==', user.uid)
-      );
+      // Fetch all logs, will filter on client
+      const q = query(logsCollection);
 
       try {
         const querySnapshot = await getDocs(q);
-        const logsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
+        const allLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
         
-        // Sort and filter on the client side
-        const sortedLogs = logsData.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+        // Filter for current user on the client
+        const userLogs = allLogs.filter(log => log.userId === user.uid);
+
+        // Sort and filter for today on the client side
+        const sortedLogs = userLogs.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
         const today = new Date();
         const startOfToday = startOfDay(today);
