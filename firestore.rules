@@ -11,25 +11,43 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
-
+    
+    // User can read/update their own profile. Admins can get any profile.
     match /userProfile/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list, create, update: if isOwner(userId);
     }
     
+    // Admins can see who other admins are.
     match /roles_admin/{userId} {
-        allow get, list: if isAdmin();
+      allow get, list: if isAdmin();
     }
 
+    // A user can create and read their own nutrition logs.
     match /userProfile/{userId}/nutritionLogs/{logId} {
-        allow read, create: if isOwner(userId);
+      allow read, create: if isOwner(userId);
     }
 
-    // Temporarily allow any authenticated user to read/write to collections
-    // to resolve persistent permission errors on the admin dashboard.
-    // THIS IS NOT A SECURE RULESET FOR PRODUCTION.
-    match /{collection}/{docId} {
-      allow read, write: if request.auth != null;
+    // Any authenticated user can create reports, feedback, and ratings.
+    match /emergencyReports/{reportId} {
+      allow create: if request.auth != null;
+      allow read: if isAdmin();
+    }
+
+    match /hospitalFeedbacks/{feedbackId} {
+      allow create: if request.auth != null;
+      allow read: if isAdmin();
+    }
+
+    match /messFoodRatings/{ratingId} {
+      // Allow any authenticated user to read to populate charts on homepage.
+      allow read, create: if request.auth != null;
+    }
+    
+    // Any authenticated user can create an appointment. Admins can read them.
+    match /appointments/{appointmentId} {
+       allow create: if request.auth != null;
+       allow read: if isAdmin();
     }
   }
 }
