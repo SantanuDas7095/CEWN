@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -15,6 +16,8 @@ import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestor
 import { useFirestore } from "@/firebase";
 import type { EmergencyReport } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function LiveAlerts() {
   const [reports, setReports] = useState<EmergencyReport[]>([]);
@@ -33,6 +36,14 @@ export default function LiveAlerts() {
       });
       setReports(reportsData);
       setLoading(false);
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: reportsCol.path,
+            operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error fetching live alerts:", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();

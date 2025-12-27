@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { useFirestore } from "@/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
 import type { EmergencyReport, HospitalFeedback, MessFoodRating } from "@/lib/types";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function PredictiveHealth() {
   const [loading, setLoading] = useState(false);
@@ -28,21 +30,38 @@ export default function PredictiveHealth() {
     if (!db) return;
     setDataLoading(true);
     
-    const unsubEmergency = onSnapshot(collection(db, "emergencyReports"), (snap) => {
+    const emergencyReportsCol = collection(db, "emergencyReports");
+    const hospitalFeedbacksCol = collection(db, "hospitalFeedbacks");
+    const messFoodRatingsCol = collection(db, "messFoodRatings");
+    
+    const unsubEmergency = onSnapshot(emergencyReportsCol, (snap) => {
         setEmergencyReports(snap.docs.map(doc => ({ ...doc.data(), reportId: doc.id } as any)));
+    }, (err) => {
+        const permissionError = new FirestorePermissionError({ path: emergencyReportsCol.path, operation: 'list' }, err);
+        errorEmitter.emit('permission-error', permissionError);
     });
 
-    const unsubFeedback = onSnapshot(collection(db, "hospitalFeedbacks"), (snap) => {
+    const unsubFeedback = onSnapshot(hospitalFeedbacksCol, (snap) => {
         setHospitalFeedbacks(snap.docs.map(doc => ({ ...doc.data(), feedbackId: doc.id } as any)));
+    }, (err) => {
+        const permissionError = new FirestorePermissionError({ path: hospitalFeedbacksCol.path, operation: 'list' }, err);
+        errorEmitter.emit('permission-error', permissionError);
     });
 
-    const unsubRatings = onSnapshot(collection(db, "messFoodRatings"), (snap) => {
+    const unsubRatings = onSnapshot(messFoodRatingsCol, (snap) => {
         setMessFoodRatings(snap.docs.map(doc => ({ ...doc.data(), ratingId: doc.id } as any)));
+    }, (err) => {
+        const permissionError = new FirestorePermissionError({ path: messFoodRatingsCol.path, operation: 'list' }, err);
+        errorEmitter.emit('permission-error', permissionError);
     });
+    
+    const allDataLoaded = Promise.all([
+        new Promise(res => { const unsub = onSnapshot(emergencyReportsCol, () => { res(true); unsub(); }) }),
+        new Promise(res => { const unsub = onSnapshot(hospitalFeedbacksCol, () => { res(true); unsub(); }) }),
+        new Promise(res => { const unsub = onSnapshot(messFoodRatingsCol, () => { res(true); unsub(); }) })
+    ]);
 
-    Promise.all([new Promise(res => onSnapshot(collection(db, "emergencyReports"), res)), new Promise(res => onSnapshot(collection(db, "hospitalFeedbacks"), res)), new Promise(res => onSnapshot(collection(db, "messFoodRatings"), res))]).then(() => {
-        setDataLoading(false);
-    })
+    allDataLoaded.then(() => setDataLoading(false));
 
     return () => {
         unsubEmergency();

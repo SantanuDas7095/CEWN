@@ -77,7 +77,13 @@ export default function MessPage() {
       const avgRating = totalRating / ratingCount;
       setWeeklyScore(Math.round((avgRating / 5) * 100));
       setScoreLoading(false);
-    }, () => {
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: ratingsQuery.path,
+            operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error fetching mess ratings for scorecard:", error);
         setScoreLoading(false);
         setWeeklyScore(0);
     });
@@ -125,7 +131,16 @@ export default function MessPage() {
             ...(imageUrl && { imageUrl }),
         };
 
-        await addDoc(collection(db, "messFoodRatings"), ratingData);
+        addDoc(collection(db, "messFoodRatings"), ratingData)
+          .catch(error => {
+            const permissionError = new FirestorePermissionError({
+                path: 'messFoodRatings',
+                operation: 'create',
+                requestResourceData: ratingData,
+            }, error);
+            errorEmitter.emit('permission-error', permissionError);
+            throw error; // Re-throw to be caught by outer catch
+          });
 
         if (isSick === 'yes') {
             toast({
@@ -148,12 +163,6 @@ export default function MessPage() {
 
     } catch (error) {
         console.error("Error submitting rating:", error);
-        const permissionError = new FirestorePermissionError({
-            path: 'messFoodRatings',
-            operation: 'create',
-            requestResourceData: { foodQualityRating: rating, sickAfterMealReport: isSick, hasPhoto: !!photo, messName: selectedMess, mealType: selectedMeal },
-        }, error);
-        errorEmitter.emit('permission-error', permissionError);
         toast({
             title: "Error",
             description: "Could not submit your report. Please try again.",

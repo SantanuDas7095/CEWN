@@ -13,6 +13,8 @@ import type { DailyNutritionLog } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startOfDay, endOfDay, format } from 'date-fns';
 import Image from 'next/image';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function NutritionDiaryPage() {
   const { user, loading: userLoading } = useUser();
@@ -47,6 +49,11 @@ export default function NutritionDiaryPage() {
       setLogs(logsData);
       setLoading(false);
     }, (error) => {
+      const permissionError = new FirestorePermissionError({
+        path: logsCollection.path,
+        operation: 'list',
+      }, error);
+      errorEmitter.emit('permission-error', permissionError);
       console.error("Error fetching nutrition logs:", error);
       setLoading(false);
     });

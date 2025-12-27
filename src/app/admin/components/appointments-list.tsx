@@ -16,6 +16,8 @@ import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/fire
 import { useFirestore } from "@/firebase";
 import type { Appointment } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function AppointmentsList() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -34,6 +36,14 @@ export default function AppointmentsList() {
       });
       setAppointments(appointmentsData);
       setLoading(false);
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: appointmentsCol.path,
+            operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error fetching appointments:", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();

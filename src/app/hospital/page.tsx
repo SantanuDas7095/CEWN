@@ -87,6 +87,13 @@ export default function HospitalPage() {
         totalWaitTime += doc.data().waitingTime;
       });
       setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: feedbacksCol.path,
+            operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error fetching hospital feedbacks for stats:", error);
     });
 
     return () => unsubscribe();

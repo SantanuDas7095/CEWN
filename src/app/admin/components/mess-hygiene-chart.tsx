@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
@@ -6,6 +7,8 @@ import { collection, onSnapshot, query } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 type ChartData = {
   day: string;
@@ -62,6 +65,14 @@ export default function MessHygieneChart() {
 
       setChartData(formattedData);
       setLoading(false);
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: ratingsCol.path,
+            operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error fetching mess ratings:", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();
