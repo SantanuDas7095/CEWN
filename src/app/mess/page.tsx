@@ -164,6 +164,11 @@ export default function MessPage() {
     }
   };
   
+  const handleMessChange = (mess: string) => {
+    setSelectedMess(mess);
+    setSelectedMeal("");
+  }
+  
   const currentMealOptions = selectedMess === "Gargi hostel mess" ? [...meals, "Snacks"] : meals;
 
   const getScorecardTitle = () => {
@@ -208,7 +213,7 @@ export default function MessPage() {
                 <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label>Select Mess</Label>
-                        <Select onValueChange={setSelectedMess} value={selectedMess}>
+                        <Select onValueChange={handleMessChange} value={selectedMess}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Choose a mess" />
                             </SelectTrigger>
@@ -335,5 +340,3 @@ export default function MessPage() {
     </div>
   );
 }
-
-    
