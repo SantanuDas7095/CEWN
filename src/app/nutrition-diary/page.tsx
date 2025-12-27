@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/common/header';
@@ -30,34 +29,38 @@ export default function NutritionDiaryPage() {
   }, [user, userLoading, router]);
 
   useEffect(() => {
-    if (!user || !db) return;
+    async function fetchLogs() {
+      if (!user || !db) return;
 
-    setLoading(true);
-    
-    const logsCollection = collection(db, "nutritionLogs");
-    const q = query(
-      logsCollection,
-      where('userId', '==', user.uid),
-      orderBy('timestamp', 'desc')
-    );
+      setLoading(true);
+      const logsCollection = collection(db, 'nutritionLogs');
+      const q = query(
+        logsCollection,
+        where('userId', '==', user.uid),
+        orderBy('timestamp', 'desc')
+      );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const logsData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog))
-        .filter(log => log.timestamp && isToday(log.timestamp.toDate())); // Filter for today on the client
-      setLogs(logsData);
-      setLoading(false);
-    }, (error) => {
-      const permissionError = new FirestorePermissionError({
-        path: logsCollection.path,
-        operation: 'list',
-      }, error);
-      errorEmitter.emit('permission-error', permissionError);
-      setLoading(false);
-    });
+      try {
+        const querySnapshot = await getDocs(q);
+        const logsData = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog))
+          .filter(log => log.timestamp && isToday(log.timestamp.toDate()));
+        setLogs(logsData);
+      } catch (error) {
+        const permissionError = new FirestorePermissionError({
+          path: logsCollection.path,
+          operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    return () => unsubscribe();
-  }, [user, db]);
+    if (!userLoading && user) {
+      fetchLogs();
+    }
+  }, [user, db, userLoading]);
 
   const totals = logs.reduce((acc, log) => {
     acc.calories += log.calories;
@@ -132,7 +135,7 @@ export default function NutritionDiaryPage() {
                             <Image src={log.photoUrl} alt="Meal photo" width={150} height={150} className="rounded-md object-cover aspect-square" />
                         )}
                         <div className="flex-1">
-                            <p className="text-sm text-muted-foreground font-semibold mb-2">Logged at {format(log.timestamp.toDate(), 'p')}</p>
+                            <p className="text-sm text-muted-foreground font-semibold mb-2">Logged at {log.timestamp && format(log.timestamp.toDate(), 'p')}</p>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                                 <div><strong>Calories:</strong> {log.calories.toFixed(0)}</div>
                                 <div><strong>Protein:</strong> {log.proteinGrams.toFixed(1)}g</div>
