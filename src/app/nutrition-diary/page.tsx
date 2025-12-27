@@ -36,20 +36,24 @@ export default function NutritionDiaryPage() {
       setLoading(true);
       setError(null);
       const logsCollection = collection(db, 'nutritionLogs');
+      // Simplified query to only filter by userId
       const q = query(
         logsCollection,
-        where('userId', '==', user.uid),
-        orderBy('timestamp', 'desc')
+        where('userId', '==', user.uid)
       );
 
       try {
         const querySnapshot = await getDocs(q);
         const logsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
         
+        // Sort and filter on the client
+        const sortedLogs = logsData.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+
         const today = new Date();
         const startOfToday = startOfDay(today);
         const endOfToday = endOfDay(today);
-        const todaysLogs = logsData.filter(log => {
+
+        const todaysLogs = sortedLogs.filter(log => {
             const logDate = log.timestamp.toDate();
             return logDate >= startOfToday && logDate <= endOfToday;
         });
