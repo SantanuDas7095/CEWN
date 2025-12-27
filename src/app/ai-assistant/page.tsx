@@ -154,51 +154,49 @@ export default function AiAssistantPage() {
   const handleSaveToDiary = async () => {
     if (!nutritionData || !user || !db || !storage) return;
     setIsSaving(true);
-
+  
     const logData = {
-        ...nutritionData,
-        userId: user.uid,
-        timestamp: serverTimestamp(),
-        photoUrl: '', // Initialize photoUrl
+      ...nutritionData,
+      userId: user.uid,
+      timestamp: serverTimestamp(),
+      photoUrl: '', // Initialize photoUrl
     };
-
+  
     try {
-        if (mealPhoto) {
-            const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
-            const snapshot = await uploadBytes(photoRef, mealPhoto);
-            logData.photoUrl = await getDownloadURL(snapshot.ref);
-        }
-
-        const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
-        
-        await addDoc(nutritionLogsCol, logData);
-
-        toast({
-            title: "Meal Saved!",
-            description: "Your meal has been added to your nutrition diary.",
-        });
-
-    } catch (error) {
-        console.error("Error saving to diary:", error);
-        
-        // This is the important part for debugging.
-        // It creates a detailed error object and emits it.
-        // The FirebaseErrorListener will catch this and display it in the Next.js overlay in development.
-        const permissionError = new FirestorePermissionError({
-            path: `users/${user.uid}/nutritionLogs`,
-            operation: 'create',
-            requestResourceData: logData, // Pass the actual data being sent
-        }, error);
-        errorEmitter.emit('permission-error', permissionError);
-
-        // Show a user-friendly message
-        toast({
-            title: "Save Failed",
-            description: "Could not save your meal to the diary. Please check permissions and try again.",
-            variant: "destructive",
-        });
+      if (mealPhoto) {
+        const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
+        const snapshot = await uploadBytes(photoRef, mealPhoto);
+        logData.photoUrl = await getDownloadURL(snapshot.ref);
+      }
+  
+      // Corrected collection path
+      const nutritionLogsCol = collection(db, `userProfile/${user.uid}/nutritionLogs`);
+      
+      await addDoc(nutritionLogsCol, logData);
+  
+      toast({
+        title: "Meal Saved!",
+        description: "Your meal has been added to your nutrition diary.",
+      });
+  
+    } catch (error: any) {
+      console.error("Error saving to diary:", error);
+      
+      const permissionError = new FirestorePermissionError({
+        // Corrected path for error reporting
+        path: `userProfile/${user.uid}/nutritionLogs`,
+        operation: 'create',
+        requestResourceData: logData,
+      }, error);
+      errorEmitter.emit('permission-error', permissionError);
+  
+      toast({
+        title: "Save Failed",
+        description: "Could not save your meal. This might be a permission issue. The error has been logged for debugging.",
+        variant: "destructive",
+      });
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
   
@@ -364,5 +362,3 @@ export default function AiAssistantPage() {
     </div>
   );
 }
-
-    

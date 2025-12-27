@@ -22,7 +22,7 @@ service cloud.firestore {
         allow get, list: if isAdmin();
     }
 
-    match /users/{userId}/nutritionLogs/{logId} {
+    match /userProfile/{userId}/nutritionLogs/{logId} {
         allow read, create: if isOwner(userId);
     }
 

@@ -34,7 +34,7 @@ export default function NutritionDiaryPage() {
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
 
-    const logsCollection = collection(db, `users/${user.uid}/nutritionLogs`);
+    const logsCollection = collection(db, `userProfile/${user.uid}/nutritionLogs`);
     const q = query(
       logsCollection,
       where('timestamp', '>=', todayStart),
