@@ -147,9 +147,8 @@ export default function MessPage() {
     }
     setIsSubmitting(true);
 
-    let imageUrl: string | undefined = undefined;
-
     try {
+        let imageUrl: string | undefined = undefined;
         if (photo) {
             const photoRef = ref(storage, `mess-photos/${user.uid}/${Date.now()}_${photo.name}`);
             const snapshot = await uploadBytes(photoRef, photo);
@@ -166,41 +165,47 @@ export default function MessPage() {
             ...(imageUrl && { imageUrl }),
         };
 
-        addDoc(collection(db, "messFoodRatings"), ratingData)
-          .catch(error => {
+        try {
+            await addDoc(collection(db, "messFoodRatings"), ratingData);
+            
+            if (isSick === 'yes') {
+                toast({
+                    title: "Sickness Reported",
+                    description: "Your report has been sent. Please visit the hospital if you feel unwell.",
+                    variant: "destructive",
+                });
+            } else {
+                toast({
+                    title: "Rating Submitted",
+                    description: `You rated today's food ${rating} out of 5. Thank you!`,
+                });
+            }
+            // Reset form state
+            setRating(3);
+            setSelectedMess("");
+            setSelectedMeal("");
+            setPhoto(null);
+            setPhotoPreview(null);
+
+        } catch (error) {
             const permissionError = new FirestorePermissionError({
                 path: 'messFoodRatings',
                 operation: 'create',
                 requestResourceData: ratingData,
             }, error);
             errorEmitter.emit('permission-error', permissionError);
-            throw error; // Re-throw to be caught by outer catch
-          });
-
-        if (isSick === 'yes') {
             toast({
-                title: "Sickness Reported",
-                description: "Your report has been sent. Please visit the hospital if you feel unwell.",
+                title: "Submission Error",
+                description: "Could not save your rating due to a permission issue.",
                 variant: "destructive",
             });
-        } else {
-            toast({
-                title: "Rating Submitted",
-                description: `You rated today's food ${rating} out of 5. Thank you!`,
-            });
         }
-        // Reset form state
-        setRating(3);
-        setSelectedMess("");
-        setSelectedMeal("");
-        setPhoto(null);
-        setPhotoPreview(null);
 
     } catch (error) {
         console.error("Error submitting rating:", error);
         toast({
             title: "Error",
-            description: "Could not submit your report. Please try again.",
+            description: "An unexpected error occurred. Could not submit your report.",
             variant: "destructive",
         });
     } finally {
