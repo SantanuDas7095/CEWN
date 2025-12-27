@@ -155,6 +155,7 @@ export default function AiAssistantPage() {
     if (!nutritionData || !user || !db || !storage) return;
     setIsSaving(true);
   
+    let photoUrl: string | undefined = undefined;
     const logData = {
       ...nutritionData,
       userId: user.uid,
@@ -162,41 +163,55 @@ export default function AiAssistantPage() {
       photoUrl: '', // Initialize photoUrl
     };
   
-    try {
-      if (mealPhoto) {
-        const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
-        const snapshot = await uploadBytes(photoRef, mealPhoto);
-        logData.photoUrl = await getDownloadURL(snapshot.ref);
-      }
-  
+    const processSave = () => {
       // Corrected collection path
       const nutritionLogsCol = collection(db, `userProfile/${user.uid}/nutritionLogs`);
-      
-      await addDoc(nutritionLogsCol, logData);
   
-      toast({
-        title: "Meal Saved!",
-        description: "Your meal has been added to your nutrition diary.",
-      });
+      addDoc(nutritionLogsCol, logData)
+        .then(() => {
+          toast({
+            title: "Meal Saved!",
+            description: "Your meal has been added to your nutrition diary.",
+          });
+        })
+        .catch(error => {
+          const permissionError = new FirestorePermissionError({
+            path: `userProfile/${user.uid}/nutritionLogs`,
+            operation: 'create',
+            requestResourceData: logData,
+          }, error);
+          errorEmitter.emit('permission-error', permissionError);
   
-    } catch (error: any) {
-      console.error("Error saving to diary:", error);
-      
-      const permissionError = new FirestorePermissionError({
-        // Corrected path for error reporting
-        path: `userProfile/${user.uid}/nutritionLogs`,
-        operation: 'create',
-        requestResourceData: logData,
-      }, error);
-      errorEmitter.emit('permission-error', permissionError);
+          toast({
+            title: "Save Failed",
+            description: "Could not save your meal. This might be a permission issue. The error has been logged for debugging.",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setIsSaving(false);
+        });
+    };
   
-      toast({
-        title: "Save Failed",
-        description: "Could not save your meal. This might be a permission issue. The error has been logged for debugging.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+    if (mealPhoto) {
+      const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
+      uploadBytes(photoRef, mealPhoto)
+        .then(snapshot => getDownloadURL(snapshot.ref))
+        .then(url => {
+          logData.photoUrl = url;
+          processSave();
+        })
+        .catch(error => {
+          console.error("Error uploading photo:", error);
+          toast({
+            title: "Photo Upload Failed",
+            description: "Could not upload your meal photo. The meal was not saved.",
+            variant: "destructive",
+          });
+          setIsSaving(false);
+        });
+    } else {
+      processSave();
     }
   };
   

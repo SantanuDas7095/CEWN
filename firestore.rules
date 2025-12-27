@@ -13,9 +13,7 @@ service cloud.firestore {
     }
 
     match /userProfile/{userId} {
-      // Explicitly add 'get' for the owner. This is required for subcollection writes.
-      allow get: if isOwner(userId) || isAdmin();
-      allow read, update: if isOwner(userId);
+      allow read, update: if isOwner(userId) || isAdmin();
       allow create: if request.auth != null;
     }
     
