@@ -13,19 +13,17 @@ service cloud.firestore {
     }
     
     match /userProfile/{userId} {
-      allow get, update: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow list: if isOwner(userId); // list was missing create
+      allow get, update, create: if isOwner(userId);
+      allow list: if isAdmin();
     }
     
-    // Allow a user to check for their own admin document, and allow admins to list all admins.
     match /roles_admin/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
     }
 
-    match /userProfile/{userId}/nutritionLogs/{logId} {
-      allow read, create: if isOwner(userId);
+    match /nutritionLogs/{logId} {
+      allow read, create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
 
     match /emergencyReports/{reportId} {

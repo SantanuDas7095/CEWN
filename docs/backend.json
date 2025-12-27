@@ -156,9 +156,9 @@
         "schema": { "$ref": "#/entities/AdminRole" },
         "description": "A collection where the document ID is the UID of an admin user."
     },
-    "/userProfile/{userId}/nutritionLogs/{logId}": {
+    "/nutritionLogs/{logId}": {
         "schema": { "$ref": "#/entities/DailyNutritionLog" },
-        "description": "Stores a user's daily nutrition logs."
+        "description": "Stores a user's daily nutrition logs in a top-level collection."
     }
   }
 }

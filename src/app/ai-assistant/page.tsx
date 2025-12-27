@@ -163,7 +163,7 @@ export default function AiAssistantPage() {
     };
   
     const processSave = (dataToSave: typeof logData) => {
-      const nutritionLogsCol = collection(db, `userProfile/${user.uid}/nutritionLogs`);
+      const nutritionLogsCol = collection(db, "nutritionLogs");
   
       addDoc(nutritionLogsCol, dataToSave)
         .then(() => {
@@ -174,7 +174,7 @@ export default function AiAssistantPage() {
         })
         .catch(error => {
           const permissionError = new FirestorePermissionError({
-            path: `userProfile/${user.uid}/nutritionLogs`,
+            path: "nutritionLogs",
             operation: 'create',
             requestResourceData: dataToSave,
           }, error);
@@ -374,5 +374,3 @@ export default function AiAssistantPage() {
     </div>
   );
 }
-
-    
