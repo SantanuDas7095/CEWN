@@ -155,60 +155,48 @@ export default function AiAssistantPage() {
     if (!nutritionData || !user || !db || !storage) return;
     setIsSaving(true);
     
-    let photoUrl: string | undefined;
+    try {
+        let photoUrl: string | undefined = undefined;
+        if (mealPhoto) {
+            const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
+            const snapshot = await uploadBytes(photoRef, mealPhoto);
+            photoUrl = await getDownloadURL(snapshot.ref);
+        }
 
-    const processSave = (photoUrl?: string) => {
-      const logData = {
-        ...nutritionData,
-        userId: user.uid,
-        timestamp: serverTimestamp(),
-        ...(photoUrl && { photoUrl }),
-      };
+        const logData = {
+            ...nutritionData,
+            userId: user.uid,
+            timestamp: serverTimestamp(),
+            ...(photoUrl && { photoUrl }),
+        };
 
-      const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
-      
-      addDoc(nutritionLogsCol, logData)
-        .then(() => {
-          toast({
+        const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
+        
+        await addDoc(nutritionLogsCol, logData)
+          .catch((error) => {
+            console.error("Error saving to diary:", error);
+            const permissionError = new FirestorePermissionError({
+                path: `users/${user.uid}/nutritionLogs`,
+                operation: 'create',
+                requestResourceData: logData,
+            }, error);
+            errorEmitter.emit('permission-error', permissionError);
+            throw error; // re-throw to be caught by the outer try/catch
+          });
+
+        toast({
             title: "Meal Saved!",
             description: "Your meal has been added to your nutrition diary.",
-          });
-        })
-        .catch((error) => {
-          console.error("Error saving to diary:", error);
-          const permissionError = new FirestorePermissionError({
-              path: `users/${user.uid}/nutritionLogs`,
-              operation: 'create',
-              requestResourceData: logData,
-          }, error);
-          errorEmitter.emit('permission-error', permissionError);
-          toast({
-              title: "Save Failed",
-              description: "Could not save your meal to the diary. Please check permissions and try again.",
-              variant: "destructive",
-          });
-        })
-        .finally(() => {
-          setIsSaving(false);
         });
-    };
 
-    if (mealPhoto) {
-      const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
-      uploadBytes(photoRef, mealPhoto)
-        .then(snapshot => getDownloadURL(snapshot.ref))
-        .then(url => processSave(url))
-        .catch(error => {
-          console.error("Error uploading photo:", error);
-           toast({
-              title: "Photo Upload Failed",
-              description: "Could not upload your meal photo. Please try again.",
-              variant: "destructive",
-          });
-          setIsSaving(false);
+    } catch (error) {
+        toast({
+            title: "Save Failed",
+            description: "Could not save your meal to the diary. Please check permissions and try again.",
+            variant: "destructive",
         });
-    } else {
-      processSave();
+    } finally {
+        setIsSaving(false);
     }
   };
   
