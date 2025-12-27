@@ -152,27 +152,30 @@ export default function AiAssistantPage() {
   };
 
   const handleSaveToDiary = async () => {
-    if (!nutritionData || !mealPhoto || !user || !db || !storage) return;
+    if (!nutritionData || !user || !db || !storage) return;
     setIsSaving(true);
     try {
+      let photoUrl: string | undefined;
+      if (mealPhoto) {
         const photoRef = ref(storage, `nutrition-diary/${user.uid}/${Date.now()}_${mealPhoto.name}`);
         const snapshot = await uploadBytes(photoRef, mealPhoto);
-        const photoUrl = await getDownloadURL(snapshot.ref);
+        photoUrl = await getDownloadURL(snapshot.ref);
+      }
 
-        const logData = {
-            ...nutritionData,
-            userId: user.uid,
-            timestamp: serverTimestamp(),
-            photoUrl: photoUrl
-        };
-        
-        const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
-        await addDoc(nutritionLogsCol, logData);
+      const logData = {
+        ...nutritionData,
+        userId: user.uid,
+        timestamp: serverTimestamp(),
+        ...(photoUrl && { photoUrl }),
+      };
 
-        toast({
-            title: "Meal Saved!",
-            description: "Your meal has been added to your nutrition diary.",
-        });
+      const nutritionLogsCol = collection(db, `users/${user.uid}/nutritionLogs`);
+      await addDoc(nutritionLogsCol, logData);
+
+      toast({
+        title: "Meal Saved!",
+        description: "Your meal has been added to your nutrition diary.",
+      });
 
     } catch (error) {
         console.error("Error saving to diary:", error);
