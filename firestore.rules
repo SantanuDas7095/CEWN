@@ -27,32 +27,32 @@ service cloud.firestore {
 
     match /emergencyReports/{reportId} {
       // Any authenticated user can create a report.
-      // Only admins can read the full list of reports.
+      // Only admins can read/list/write all reports.
       allow create: if request.auth != null;
       allow read, write, delete, list: if isAdmin();
     }
 
     match /hospitalFeedbacks/{feedbackId} {
       // Any authenticated user can create feedback.
-      // Only admins can read the full list of feedbacks.
+      // Only admins can read/list/write all feedback.
       allow create: if request.auth != null;
       allow read, write, delete, list: if isAdmin();
     }
 
     match /messFoodRatings/{ratingId} {
       // Any authenticated user can create a rating.
-      // Only admins can read the full list of ratings.
+      // Only admins can read/list/write all ratings.
       allow create: if request.auth != null;
       allow read, write, delete, list: if isAdmin();
     }
 
     match /appointments/{appointmentId} {
       // Any authenticated user can create an appointment.
-      // Admins can read/write/delete all appointments.
-      // Users can only read their own appointments.
+      // Users can read their own appointments.
+      // Admins can manage all appointments.
       allow create: if request.auth != null;
+      allow get: if request.auth != null && resource.data.studentId == request.auth.uid;
       allow read, write, delete, list: if isAdmin();
-      allow get: if request.auth != null && (resource.data.studentId == request.auth.uid);
     }
   }
 }
