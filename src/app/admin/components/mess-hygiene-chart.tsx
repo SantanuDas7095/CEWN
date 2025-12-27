@@ -9,16 +9,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type ChartData = {
   day: string;
-  [key: string]: number | string; // Allows for dynamic hostel keys
+  [key: string]: number | string; // Allows for dynamic mess names
 }
 
 export default function MessHygieneChart() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [hostels, setHostels] = useState<string[]>([]);
+  const [messes, setMesses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const db = useFirestore();
 
-  const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
+  const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--primary))"];
 
   useEffect(() => {
     if (!db) return;
@@ -26,35 +26,35 @@ export default function MessHygieneChart() {
     const q = query(ratingsCol);
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const dailyAverages: { [day: string]: { [hostel: string]: { total: number, count: number } } } = {};
-      const hostelSet = new Set<string>();
+      const dailyAverages: { [day: string]: { [mess: string]: { total: number, count: number } } } = {};
+      const messSet = new Set<string>();
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        // Assuming hostel is part of studentDetails for now, e.g., "Hostel 1"
-        const hostel = "Hostel " + (Math.floor(Math.random() * 4) + 1);
-        hostelSet.add(hostel);
-        if (data.timestamp) {
+        if (data.messName && data.timestamp) {
+          const messName = data.messName;
+          messSet.add(messName);
           const day = format(data.timestamp.toDate(), 'yyyy-MM-dd');
+
           if (!dailyAverages[day]) {
             dailyAverages[day] = {};
           }
-          if (!dailyAverages[day][hostel]) {
-            dailyAverages[day][hostel] = { total: 0, count: 0 };
+          if (!dailyAverages[day][messName]) {
+            dailyAverages[day][messName] = { total: 0, count: 0 };
           }
-          dailyAverages[day][hostel].total += data.foodQualityRating;
-          dailyAverages[day][hostel].count += 1;
+          dailyAverages[day][messName].total += data.foodQualityRating;
+          dailyAverages[day][messName].count += 1;
         }
       });
       
-      const uniqueHostels = Array.from(hostelSet).sort();
-      setHostels(uniqueHostels);
+      const uniqueMesses = Array.from(messSet).sort();
+      setMesses(uniqueMesses);
 
       const formattedData = Object.keys(dailyAverages).map(day => {
         const dayEntry: ChartData = { day };
-        uniqueHostels.forEach(hostel => {
-          if (dailyAverages[day][hostel]) {
-            dayEntry[hostel] = parseFloat((dailyAverages[day][hostel].total / dailyAverages[day][hostel].count).toFixed(1));
+        uniqueMesses.forEach(mess => {
+          if (dailyAverages[day][mess]) {
+            dayEntry[mess] = parseFloat((dailyAverages[day][mess].total / dailyAverages[day][mess].count).toFixed(1));
           }
         });
         return dayEntry;
@@ -88,7 +88,7 @@ export default function MessHygieneChart() {
             dataKey="day" 
             stroke="hsl(var(--foreground))"
             fontSize={12} 
-            tickFormatter={(str) => str.split('-')[2]}
+            tickFormatter={(str) => format(new Date(str), 'MMM d')}
           />
           <YAxis stroke="hsl(var(--foreground))" fontSize={12} domain={[1, 5]} />
           <Tooltip
@@ -96,11 +96,11 @@ export default function MessHygieneChart() {
               backgroundColor: "hsl(var(--card))",
               borderColor: "hsl(var(--border))",
             }}
-            labelFormatter={(label) => `July ${label.split('-')[2]}`}
+            labelFormatter={(label) => format(new Date(label), 'PPP')}
           />
           <Legend wrapperStyle={{fontSize: "12px"}}/>
-          {hostels.map((hostel, i) => (
-             <Line key={hostel} type="monotone" dataKey={hostel} stroke={colors[i % colors.length]} strokeWidth={2} name={hostel} />
+          {messes.map((mess, i) => (
+             <Line key={mess} type="monotone" dataKey={mess} stroke={colors[i % colors.length]} strokeWidth={2} name={mess} />
           ))}
         </LineChart>
       </ResponsiveContainer>
