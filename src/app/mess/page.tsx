@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Header } from "@/components/common/header";
@@ -9,7 +10,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { addDoc, collection, serverTimestamp, onSnapshot, query } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, where } from "firebase/firestore";
 import { useFirestore, useUser, useStorage } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -20,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { MessFoodRating } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
 const meals = ["Breakfast", "Lunch", "Dinner"];
@@ -28,6 +30,7 @@ export default function MessPage() {
   const [rating, setRating] = useState(3);
   const { toast } = useToast();
   const [weeklyScore, setWeeklyScore] = useState(0);
+  const [scoreLoading, setScoreLoading] = useState(true);
   const db = useFirestore();
   const storage = useStorage();
   const { user, loading } = useUser();
@@ -47,12 +50,19 @@ export default function MessPage() {
 
   useEffect(() => {
     if (!db) return;
-    const ratingsCol = collection(db, "messFoodRatings");
-    const q = query(ratingsCol);
+    setScoreLoading(true);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    let ratingsQuery;
+    if (selectedMess) {
+        ratingsQuery = query(collection(db, "messFoodRatings"), where("messName", "==", selectedMess));
+    } else {
+        ratingsQuery = query(collection(db, "messFoodRatings"));
+    }
+
+    const unsubscribe = onSnapshot(ratingsQuery, (querySnapshot) => {
       if(querySnapshot.empty) {
         setWeeklyScore(0);
+        setScoreLoading(false);
         return;
       }
       let totalRating = 0;
@@ -63,10 +73,14 @@ export default function MessPage() {
       });
       const avgRating = totalRating / ratingCount;
       setWeeklyScore(Math.round((avgRating / 5) * 100));
+      setScoreLoading(false);
+    }, () => {
+        setScoreLoading(false);
+        setWeeklyScore(0);
     });
 
     return () => unsubscribe();
-  }, [db])
+  }, [db, selectedMess])
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -278,16 +292,29 @@ export default function MessPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="font-headline">Weekly Hygiene Scorecard</CardTitle>
-                        <CardDescription>An aggregated score based on student ratings and reports.</CardDescription>
+                        <CardTitle className="font-headline">{selectedMess ? `${selectedMess} Scorecard` : 'Overall Hygiene Scorecard'}</CardTitle>
+                        <CardDescription>An aggregated score based on student ratings.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex justify-between items-baseline">
-                           <span className="font-medium">Overall Score</span>
-                           <span className="text-3xl font-bold text-primary">{weeklyScore}%</span>
-                        </div>
-                        <Progress value={weeklyScore} className="h-4" />
-                        <p className="text-xs text-muted-foreground">This score reflects data from the last 7 days.</p>
+                        {scoreLoading ? (
+                           <div className="space-y-2">
+                                <div className="flex justify-between items-baseline">
+                                   <Skeleton className="h-6 w-24" />
+                                   <Skeleton className="h-8 w-16" />
+                                </div>
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-3 w-3/4" />
+                           </div>
+                        ) : (
+                            <>
+                                <div className="flex justify-between items-baseline">
+                                <span className="font-medium">{selectedMess ? 'Average Score' : 'Overall Score'}</span>
+                                <span className="text-3xl font-bold text-primary">{weeklyScore}%</span>
+                                </div>
+                                <Progress value={weeklyScore} className="h-4" />
+                                <p className="text-xs text-muted-foreground">This score reflects all available historical data.</p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
             </div>
