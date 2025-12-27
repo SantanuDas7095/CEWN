@@ -1,16 +1,16 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { predictHealthRisks, type PredictHealthRisksInput, type PredictHealthRisksOutput } from "@/ai/flows/predict-health-risks";
-import { BrainCircuit, Loader, AlertTriangle, ShieldCheck } from "lucide-react";
+import { BrainCircuit, Loader, AlertTriangle, ShieldCheck, Database } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useFirestore } from "@/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import type { EmergencyReport, HospitalFeedback, MessFoodRating } from "@/lib/types";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
@@ -21,67 +21,60 @@ export default function PredictiveHealth() {
   const [predictions, setPredictions] = useState<PredictHealthRisksOutput | null>(null);
   const db = useFirestore();
 
-  const [emergencyReports, setEmergencyReports] = useState<EmergencyReport[]>([]);
-  const [hospitalFeedbacks, setHospitalFeedbacks] = useState<HospitalFeedback[]>([]);
-  const [messFoodRatings, setMessFoodRatings] = useState<MessFoodRating[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const [inputData, setInputData] = useState<PredictHealthRisksInput | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchAllData = async () => {
     if (!db) return;
     setDataLoading(true);
-    
-    const emergencyReportsCol = collection(db, "emergencyReports");
-    const hospitalFeedbacksCol = collection(db, "hospitalFeedbacks");
-    const messFoodRatingsCol = collection(db, "messFoodRatings");
-    
-    const unsubEmergency = onSnapshot(emergencyReportsCol, (snap) => {
-        setEmergencyReports(snap.docs.map(doc => ({ ...doc.data(), reportId: doc.id } as any)));
-    }, (err) => {
-        const permissionError = new FirestorePermissionError({ path: emergencyReportsCol.path, operation: 'list' }, err);
-        errorEmitter.emit('permission-error', permissionError);
-    });
+    setError(null);
+    setInputData(null);
+    try {
+        const emergencyReportsCol = collection(db, "emergencyReports");
+        const hospitalFeedbacksCol = collection(db, "hospitalFeedbacks");
+        const messFoodRatingsCol = collection(db, "messFoodRatings");
 
-    const unsubFeedback = onSnapshot(hospitalFeedbacksCol, (snap) => {
-        setHospitalFeedbacks(snap.docs.map(doc => ({ ...doc.data(), feedbackId: doc.id } as any)));
-    }, (err) => {
-        const permissionError = new FirestorePermissionError({ path: hospitalFeedbacksCol.path, operation: 'list' }, err);
-        errorEmitter.emit('permission-error', permissionError);
-    });
-
-    const unsubRatings = onSnapshot(messFoodRatingsCol, (snap) => {
-        setMessFoodRatings(snap.docs.map(doc => ({ ...doc.data(), ratingId: doc.id } as any)));
-    }, (err) => {
-        const permissionError = new FirestorePermissionError({ path: messFoodRatingsCol.path, operation: 'list' }, err);
-        errorEmitter.emit('permission-error', permissionError);
-    });
-    
-    const allDataLoaded = Promise.all([
-        new Promise(res => { const unsub = onSnapshot(emergencyReportsCol, () => { res(true); unsub(); }) }),
-        new Promise(res => { const unsub = onSnapshot(hospitalFeedbacksCol, () => { res(true); unsub(); }) }),
-        new Promise(res => { const unsub = onSnapshot(messFoodRatingsCol, () => { res(true); unsub(); }) })
-    ]);
-
-    allDataLoaded.then(() => setDataLoading(false));
-
-    return () => {
-        unsubEmergency();
-        unsubFeedback();
-        unsubRatings();
+        const [emergencySnap, feedbackSnap, ratingsSnap] = await Promise.all([
+            getDocs(emergencyReportsCol).catch(err => {
+                const permissionError = new FirestorePermissionError({ path: emergencyReportsCol.path, operation: 'list' }, err);
+                errorEmitter.emit('permission-error', permissionError);
+                throw permissionError;
+            }),
+            getDocs(hospitalFeedbacksCol).catch(err => {
+                const permissionError = new FirestorePermissionError({ path: hospitalFeedbacksCol.path, operation: 'list' }, err);
+                errorEmitter.emit('permission-error', permissionError);
+                throw permissionError;
+            }),
+            getDocs(messFoodRatingsCol).catch(err => {
+                const permissionError = new FirestorePermissionError({ path: messFoodRatingsCol.path, operation: 'list' }, err);
+                errorEmitter.emit('permission-error', permissionError);
+                throw permissionError;
+            })
+        ]);
+        
+        const emergencyReports = emergencySnap.docs.map(doc => ({ ...doc.data(), reportId: doc.id } as any));
+        const hospitalFeedbacks = feedbackSnap.docs.map(doc => ({ ...doc.data(), feedbackId: doc.id } as any));
+        const messFoodRatings = ratingsSnap.docs.map(doc => ({ ...doc.data(), ratingId: doc.id } as any));
+        
+        setInputData({ emergencyReports, hospitalFeedbacks, messFoodRatings });
+    } catch (e: any) {
+        setError(e.message || "Failed to fetch required data for analysis.");
+    } finally {
+        setDataLoading(false);
     }
-  }, [db]);
+  }
 
 
   const handleAnalysis = async () => {
+    if (!inputData) {
+        setError("Please load the campus data before running the analysis.");
+        return;
+    }
     setLoading(true);
     setError(null);
     setPredictions(null);
     try {
-        const input: PredictHealthRisksInput = {
-            emergencyReports,
-            hospitalFeedbacks,
-            messFoodRatings,
-        };
-        const result = await predictHealthRisks(input);
+        const result = await predictHealthRisks(inputData);
         setPredictions(result);
     } catch (error: any) {
         console.error(error);
@@ -115,28 +108,39 @@ export default function PredictiveHealth() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex justify-center">
-          <Button onClick={handleAnalysis} disabled={loading || dataLoading} size="lg">
-            {loading ? (
-              <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing Data...
-              </>
-            ) : dataLoading ? (
+        <div className="flex flex-col items-center gap-4">
+          <Button onClick={fetchAllData} disabled={dataLoading} size="lg">
+            {dataLoading ? (
                  <>
                     <Loader className="mr-2 h-4 w-4 animate-spin" />
-                    Loading Real-time Data...
+                    Loading Campus Data...
                 </>
             ) : (
-              "Run AI Health Analysis"
+                <>
+                    <Database className="mr-2 h-4 w-4"/>
+                    {inputData ? 'Reload Campus Data' : 'Load Campus Data'}
+                </>
             )}
           </Button>
+
+          {inputData && (
+             <Button onClick={handleAnalysis} disabled={loading}>
+                {loading ? (
+                <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing Data...
+                </>
+                ) : (
+                "Run AI Health Analysis"
+                )}
+            </Button>
+          )}
         </div>
 
         {error && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Analysis Failed</AlertTitle>
+            <AlertTitle>An Error Occurred</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
