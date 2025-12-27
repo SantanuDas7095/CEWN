@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { addDoc, collection, serverTimestamp, onSnapshot, query, where, QueryConstraint } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, where, QueryConstraint, orderBy, limit } from "firebase/firestore";
 import { useFirestore, useUser, useStorage } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -22,6 +22,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { MessFoodRating } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
 const meals = ["Breakfast", "Lunch", "Dinner"];
@@ -40,6 +42,8 @@ export default function MessPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedMess, setSelectedMess] = useState<string>("");
   const [selectedMeal, setSelectedMeal] = useState<string>("");
+  const [recentPhotos, setRecentPhotos] = useState<MessFoodRating[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -79,7 +83,7 @@ export default function MessPage() {
       setScoreLoading(false);
     }, (error) => {
         const permissionError = new FirestorePermissionError({
-            path: ratingsQuery.path,
+            path: 'messFoodRatings', // Simplified path for error
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
@@ -88,7 +92,39 @@ export default function MessPage() {
     });
 
     return () => unsubscribe();
-  }, [db, selectedMess, selectedMeal])
+  }, [db, selectedMess, selectedMeal]);
+
+  useEffect(() => {
+    if(!db) return;
+    setPhotosLoading(true);
+    const photosQuery = query(
+        collection(db, "messFoodRatings"), 
+        orderBy("timestamp", "desc"),
+        limit(20)
+    );
+
+    const unsubscribe = onSnapshot(photosQuery, (snapshot) => {
+        const photos: MessFoodRating[] = [];
+        snapshot.forEach(doc => {
+            const data = doc.data() as MessFoodRating;
+            if(data.imageUrl) {
+                photos.push({ id: doc.id, ...data});
+            }
+        });
+        setRecentPhotos(photos.slice(0, 6)); // Take first 6 with photos
+        setPhotosLoading(false);
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'messFoodRatings',
+            operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        setPhotosLoading(false);
+    });
+
+    return () => unsubscribe();
+
+  }, [db]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -198,7 +234,7 @@ export default function MessPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container mx-auto max-w-4xl py-12 px-4 md:px-6 md:py-20">
+        <div className="container mx-auto max-w-7xl py-12 px-4 md:px-6 md:py-20">
           <div className="text-center space-y-4">
             <Utensils className="mx-auto h-16 w-16 text-primary" />
             <h1 className="text-4xl font-bold font-headline">Mess Food Safety & Health Monitor</h1>
@@ -342,9 +378,50 @@ export default function MessPage() {
                 </Card>
             </div>
           </div>
+
+          <div className="mt-12">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline text-2xl">Recent Meal Photos</CardTitle>
+                <CardDescription>A visual log of recently rated meals from various messes.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {photosLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
+                  </div>
+                ) : recentPhotos.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {recentPhotos.map((photo) => (
+                      <Card key={photo.id} className="overflow-hidden">
+                        <div className="relative aspect-video w-full">
+                          <Image src={photo.imageUrl!} alt={`Meal from ${photo.messName}`} fill className="object-cover" />
+                           <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-xs font-bold text-white">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <span>{photo.foodQualityRating}/5</span>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <Badge variant="secondary">{photo.messName}</Badge>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {formatDistanceToNow(photo.timestamp.toDate(), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No photos have been uploaded recently.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
         </div>
       </main>
       <Footer />
     </div>
   );
 }
+
+    
