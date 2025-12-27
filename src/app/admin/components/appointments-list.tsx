@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -11,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import type { Appointment } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,6 +51,11 @@ export default function AppointmentsList() {
         return "outline";
     }
   };
+  
+  const formatDate = (timestamp: Timestamp | Date): string => {
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
+    return format(date, "PPP");
+  }
 
   if (loading) {
     return (
@@ -83,7 +89,7 @@ export default function AppointmentsList() {
           {appointments.map((appt) => (
             <TableRow key={appt.id}>
               <TableCell>
-                <div className="font-medium">{format(appt.appointmentDate.toDate(), "PPP")}</div>
+                <div className="font-medium">{formatDate(appt.appointmentDate)}</div>
                 <div className="text-xs text-muted-foreground">{appt.appointmentTime}</div>
               </TableCell>
               <TableCell className="font-medium">

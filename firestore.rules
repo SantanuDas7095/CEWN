@@ -3,11 +3,57 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    match /userProfile/{userId} {
+      // Users can read and update their own profile.
+      // Admins can read any profile.
+      allow read, update: if isOwner(userId);
+      allow get: if isAdmin();
+    }
     
-    // Allow any authenticated user to read and write to all collections.
-    // This is a temporary, permissive rule to unblock development.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    match /roles_admin/{userId} {
+        // Only admins can see who other admins are.
+        allow get, list: if isAdmin();
+    }
+
+    match /emergencyReports/{reportId} {
+      // Any authenticated user can create a report.
+      // Only admins can read the full list of reports.
+      allow create: if request.auth != null;
+      allow read, write, delete: if isAdmin();
+    }
+
+    match /hospitalFeedbacks/{feedbackId} {
+      // Any authenticated user can create feedback.
+      // Only admins can read the full list of feedbacks.
+      allow create: if request.auth != null;
+      allow read, write, delete: if isAdmin();
+    }
+
+    match /messFoodRatings/{ratingId} {
+      // Any authenticated user can create a rating.
+      // Only admins can read the full list of ratings.
+      allow create: if request.auth != null;
+      allow read, write, delete: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      // Any authenticated user can create an appointment.
+      // Admins can read all appointments.
+      // Users can read their own appointments.
+      allow create: if request.auth != null;
+      allow read, write, delete: if isAdmin();
+      match /{document=**} {
+        allow read: if request.auth != null && resource.data.studentId == request.auth.uid;
+      }
     }
   }
 }
