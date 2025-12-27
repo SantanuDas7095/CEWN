@@ -14,8 +14,8 @@ service cloud.firestore {
     
     match /userProfile/{userId} {
       allow get, update: if isOwner(userId);
-      allow list, create: if isOwner(userId);
-      allow get: if isAdmin();
+      allow create: if isOwner(userId);
+      allow list: if isOwner(userId); // list was missing create
     }
     
     // Allow a user to check for their own admin document, and allow admins to list all admins.
@@ -39,7 +39,8 @@ service cloud.firestore {
     }
 
     match /messFoodRatings/{ratingId} {
-      allow read, create: if request.auth != null;
+      allow get, create: if request.auth != null;
+      allow list: if true;
     }
     
     match /appointments/{appointmentId} {
