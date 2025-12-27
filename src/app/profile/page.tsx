@@ -135,13 +135,25 @@ export default function ProfilePage() {
       };
       
       const userDocRef = doc(db, 'userProfile', user.uid);
-      const userDoc = await getDoc(userDocRef);
       
-      if (!userDoc.exists()) {
+      // We check if the document exists to determine if we should add `createdAt`
+      const userDocSnap = await getDoc(userDocRef);
+      if (!userDocSnap.exists()) {
         userProfileData.createdAt = serverTimestamp();
       }
 
       setDoc(userDocRef, userProfileData, { merge: true })
+        .then(async () => {
+          toast({
+            title: 'Profile Updated',
+            description: 'Your profile has been successfully updated.',
+          });
+          if (auth.currentUser) {
+            await auth.currentUser.reload();
+          }
+          router.refresh();
+          setIsEditing(false);
+        })
         .catch(error => {
              const permissionError = new FirestorePermissionError({
                 path: `userProfile/${user.uid}`,
@@ -149,19 +161,16 @@ export default function ProfilePage() {
                 requestResourceData: userProfileData,
             }, error);
             errorEmitter.emit('permission-error', permissionError);
+            // We still show a generic toast for the user
+            toast({
+              title: 'Update Failed',
+              description: 'Could not save your profile due to a permissions issue.',
+              variant: 'destructive',
+            });
         });
 
-
-      toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been successfully updated.',
-      });
-      await auth.currentUser.reload();
-      router.refresh();
-      setIsEditing(false);
-
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('Error during profile update process:', error);
       toast({
         title: 'Update Failed',
         description: error.message || 'An error occurred while updating your profile.',
