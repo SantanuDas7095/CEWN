@@ -83,6 +83,34 @@
         "description": "Defines an administrative user.",
         "type": "object",
         "properties": {}
+    },
+    "FirstAidChat": {
+      "title": "First-Aid Chat",
+      "description": "A chat session with the first-aid bot.",
+      "type": "object",
+      "properties": {
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "model"] },
+              "content": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "NutritionTracker": {
+      "title": "Nutrition Tracker",
+      "description": "Nutritional analysis of a meal from a photo.",
+      "type": "object",
+      "properties": {
+        "calories": { "type": "number" },
+        "proteinGrams": { "type": "number" },
+        "carbsGrams": { "type": "number" },
+        "fatGrams": { "type": "number" }
+      }
     }
   },
   "auth": {

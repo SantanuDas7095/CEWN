@@ -26,6 +26,7 @@ const navLinks = [
   { href: "/sos", label: "SOS" },
   { href: "/hospital", label: "Hospital" },
   { href: "/mess", label: "Mess" },
+  { href: "/ai-assistant", label: "AI Assistant" },
 ];
 
 export function Header() {
