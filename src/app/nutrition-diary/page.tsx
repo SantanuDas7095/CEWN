@@ -1,24 +1,74 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BookCopy, Loader, Salad, ServerCrash } from 'lucide-react';
 import type { DailyNutritionLog } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import Image from 'next/image';
 
 export default function NutritionDiaryPage() {
   const { user, loading: userLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
-  
+  const [logs, setLogs] = useState<DailyNutritionLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/login');
     }
   }, [user, userLoading, router]);
+
+  useEffect(() => {
+    if (!user || !db) return;
+
+    const fetchLogs = async () => {
+      setLoading(true);
+      setError(null);
+      const logsCollection = collection(db, 'nutritionLogs');
+      const q = query(
+        logsCollection,
+        where('userId', '==', user.uid),
+        orderBy('timestamp', 'desc')
+      );
+
+      try {
+        const querySnapshot = await getDocs(q);
+        const logsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
+        
+        const today = new Date();
+        const startOfToday = startOfDay(today);
+        const endOfToday = endOfDay(today);
+        const todaysLogs = logsData.filter(log => {
+            const logDate = log.timestamp.toDate();
+            return logDate >= startOfToday && logDate <= endOfToday;
+        });
+
+        setLogs(todaysLogs);
+      } catch (error) {
+        const permissionError = new FirestorePermissionError({
+          path: logsCollection.path,
+          operation: 'list',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        setError("Could not fetch your nutrition logs due to a permission error.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, [user, db]);
 
   if (userLoading || !user) {
     return (
@@ -39,13 +89,58 @@ export default function NutritionDiaryPage() {
             <p className="text-lg text-muted-foreground">Your daily log of meals and nutritional intake for {format(new Date(), 'PPP')}.</p>
           </div>
 
+          {loading ? (
+             <div className="flex items-center justify-center p-12">
+                <Loader className="h-8 w-8 animate-spin text-primary" />
+             </div>
+          ) : error ? (
             <Card className="flex flex-col items-center justify-center p-12 text-center">
-                <ServerCrash className="h-16 w-16 text-destructive mb-4"/>
-                <h3 className="text-xl font-semibold">Feature Currently Unavailable</h3>
-                <p className="text-muted-foreground max-w-md">
-                    We are sorry, but the nutrition diary is temporarily unavailable due to a persistent technical issue. Our team has been notified. Please try again later.
-                </p>
+              <ServerCrash className="h-16 w-16 text-destructive mb-4"/>
+              <h3 className="text-xl font-semibold">Failed to Load Diary</h3>
+              <p className="text-muted-foreground max-w-md">{error}</p>
             </Card>
+          ) : logs.length === 0 ? (
+            <Card className="flex flex-col items-center justify-center p-12 text-center">
+              <Salad className="h-16 w-16 text-muted-foreground mb-4"/>
+              <h3 className="text-xl font-semibold">No Meals Logged Today</h3>
+              <p className="text-muted-foreground max-w-md">Use the AI Assistant to analyze a meal and save it to your diary.</p>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {logs.map(log => (
+                <Card key={log.id}>
+                    <CardHeader>
+                        <CardTitle>{format(log.timestamp.toDate(), 'p')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                        {log.photoUrl && (
+                            <div className="md:col-span-2">
+                                <Image src={log.photoUrl} alt="Meal photo" width={300} height={200} className="rounded-md object-cover" />
+                            </div>
+                        )}
+                        <div className={`grid grid-cols-2 gap-4 ${log.photoUrl ? 'md:col-span-3' : 'md:col-span-5'}`}>
+                            <div className="bg-muted p-3 rounded-md text-center">
+                                <p className="text-sm text-muted-foreground">Calories</p>
+                                <p className="text-xl font-bold">{log.calories.toFixed(0)}</p>
+                            </div>
+                            <div className="bg-muted p-3 rounded-md text-center">
+                                <p className="text-sm text-muted-foreground">Protein</p>
+                                <p className="text-xl font-bold">{log.proteinGrams.toFixed(1)}g</p>
+                            </div>
+                            <div className="bg-muted p-3 rounded-md text-center">
+                                <p className="text-sm text-muted-foreground">Carbs</p>
+                                <p className="text-xl font-bold">{log.carbsGrams.toFixed(1)}g</p>
+                            </div>
+                             <div className="bg-muted p-3 rounded-md text-center">
+                                <p className="text-sm text-muted-foreground">Fat</p>
+                                <p className="text-xl font-bold">{log.fatGrams.toFixed(1)}g</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </main>
       <Footer />
