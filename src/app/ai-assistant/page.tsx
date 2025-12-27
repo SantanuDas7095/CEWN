@@ -174,7 +174,7 @@ export default function AiAssistantPage() {
         })
         .catch(error => {
           const permissionError = new FirestorePermissionError({
-            path: "nutritionLogs",
+            path: nutritionLogsCol.path,
             operation: 'create',
             requestResourceData: dataToSave,
           }, error);
@@ -374,3 +374,5 @@ export default function AiAssistantPage() {
     </div>
   );
 }
+
+    
