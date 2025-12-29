@@ -77,7 +77,7 @@ export default function LiveAlerts() {
         <TableHeader>
           <TableRow>
             <TableHead>Type</TableHead>
-            <TableHead>Patient</TableHead>
+            <TableHead>Student</TableHead>
             <TableHead className="hidden md:table-cell">Location</TableHead>
             <TableHead className="text-right">Time</TableHead>
           </TableRow>
