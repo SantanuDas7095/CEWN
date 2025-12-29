@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { uploadPhoto } from "../actions";
 
 const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
-const meals = ["Breakfast", "Lunch", "Dinner"];
+const allMeals = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
 export default function MessPage() {
   const [rating, setRating] = useState(3);
@@ -39,8 +39,15 @@ export default function MessPage() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedMess, setSelectedMess] = useState<string>("");
-  const [selectedMeal, setSelectedMeal] = useState<string>("");
+  
+  // For the rating form
+  const [formMess, setFormMess] = useState<string>("");
+  const [formMeal, setFormMeal] = useState<string>("");
+
+  // For filtering scorecard and photos
+  const [filterMess, setFilterMess] = useState<string>("all");
+  const [filterMeal, setFilterMeal] = useState<string>("all");
+
   const [recentPhotos, setRecentPhotos] = useState<MessFoodRating[]>([]);
   const [photosLoading, setPhotosLoading] = useState(true);
 
@@ -56,11 +63,11 @@ export default function MessPage() {
     setScoreLoading(true);
 
     const constraints: QueryConstraint[] = [];
-    if (selectedMess) {
-        constraints.push(where("messName", "==", selectedMess));
+    if (filterMess !== "all") {
+        constraints.push(where("messName", "==", filterMess));
     }
-    if (selectedMeal) {
-        constraints.push(where("mealType", "==", selectedMeal));
+    if (filterMeal !== "all") {
+        constraints.push(where("mealType", "==", filterMeal));
     }
 
     const ratingsQuery = query(collection(db, "messFoodRatings"), ...constraints);
@@ -82,7 +89,7 @@ export default function MessPage() {
       setScoreLoading(false);
     }, (error) => {
         const permissionError = new FirestorePermissionError({
-            path: 'messFoodRatings', // Simplified path for error
+            path: 'messFoodRatings',
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
@@ -91,15 +98,23 @@ export default function MessPage() {
     });
 
     return () => unsubscribe();
-  }, [db, selectedMess, selectedMeal]);
+  }, [db, filterMess, filterMeal]);
 
   useEffect(() => {
     if(!db) return;
     setPhotosLoading(true);
+
+    const constraints: QueryConstraint[] = [orderBy("timestamp", "desc"), limit(20)];
+    if(filterMess !== "all") {
+        constraints.unshift(where("messName", "==", filterMess));
+    }
+    if(filterMeal !== "all") {
+        constraints.unshift(where("mealType", "==", filterMeal));
+    }
+
     const photosQuery = query(
         collection(db, "messFoodRatings"), 
-        orderBy("timestamp", "desc"),
-        limit(20)
+        ...constraints
     );
 
     const unsubscribe = onSnapshot(photosQuery, (snapshot) => {
@@ -123,7 +138,7 @@ export default function MessPage() {
 
     return () => unsubscribe();
 
-  }, [db]);
+  }, [db, filterMess, filterMeal]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -140,7 +155,7 @@ export default function MessPage() {
   };
 
   const handleSubmit = async (isSick: 'yes' | 'no') => {
-    if (!user || !db || !selectedMess || !selectedMeal) {
+    if (!user || !db || !formMess || !formMeal) {
         toast({ title: "Incomplete Form", description: "Please select a mess and a meal before submitting.", variant: "destructive" });
         return;
     }
@@ -161,8 +176,8 @@ export default function MessPage() {
 
         const ratingData: Omit<MessFoodRating, 'id'> = {
             studentId: user.uid,
-            messName: selectedMess,
-            mealType: selectedMeal,
+            messName: formMess,
+            mealType: formMeal,
             foodQualityRating: rating,
             sickAfterMealReport: isSick,
             timestamp: serverTimestamp(),
@@ -183,10 +198,9 @@ export default function MessPage() {
                 description: `You rated today's food ${rating} out of 5. Thank you!`,
             });
         }
-        // Reset form state
         setRating(3);
-        setSelectedMess("");
-        setSelectedMeal("");
+        setFormMess("");
+        setFormMeal("");
         setPhoto(null);
         setPhotoPreview(null);
     } catch (error: any) {
@@ -215,17 +229,17 @@ export default function MessPage() {
     }
   };
   
-  const handleMessChange = (mess: string) => {
-    setSelectedMess(mess);
-    setSelectedMeal("");
+  const handleFormMessChange = (mess: string) => {
+    setFormMess(mess);
+    setFormMeal("");
   }
   
-  const currentMealOptions = selectedMess === "Gargi hostel mess" ? [...meals, "Snacks"] : meals;
+  const currentMealOptions = formMess === "Gargi hostel mess" ? [...allMeals.filter(m => m !== "Snacks"), "Snacks"] : allMeals.filter(m => m !== "Snacks");
 
   const getScorecardTitle = () => {
-    if (selectedMess && selectedMeal) return `${selectedMess} - ${selectedMeal} Score`;
-    if (selectedMess) return `${selectedMess} Score`;
-    if (selectedMeal) return `${selectedMeal} Score`;
+    if (filterMess !== "all" && filterMeal !== "all") return `${filterMess} - ${filterMeal} Score`;
+    if (filterMess !== "all") return `${filterMess} Score`;
+    if (filterMeal !== "all") return `${filterMeal} Score`;
     return 'Overall Hygiene Scorecard';
   }
 
@@ -279,7 +293,7 @@ export default function MessPage() {
                 <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label>Select Mess</Label>
-                        <Select onValueChange={handleMessChange} value={selectedMess}>
+                        <Select onValueChange={handleFormMessChange} value={formMess}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Choose a mess" />
                             </SelectTrigger>
@@ -292,7 +306,7 @@ export default function MessPage() {
                     </div>
                     <div className="space-y-2">
                         <Label>Select Meal</Label>
-                        <Select onValueChange={setSelectedMeal} value={selectedMeal} disabled={!selectedMess}>
+                        <Select onValueChange={setFormMeal} value={formMeal} disabled={!formMess}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Choose a meal" />
                             </SelectTrigger>
@@ -348,7 +362,7 @@ export default function MessPage() {
 
               </CardContent>
               <div className="p-6 pt-0">
-                <Button onClick={() => handleSubmit('no')} className="w-full" disabled={isSubmitting || !selectedMess || !selectedMeal}>
+                <Button onClick={() => handleSubmit('no')} className="w-full" disabled={isSubmitting || !formMess || !formMeal}>
                     {isSubmitting ? 'Submitting...' : 'Submit Rating'}
                 </Button>
               </div>
@@ -364,7 +378,7 @@ export default function MessPage() {
                         <CardDescription>If you feel sick after a meal, report it immediately. Select mess and meal first.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button onClick={() => handleSubmit('yes')} variant="destructive" className="w-full text-lg py-6" disabled={isSubmitting || !selectedMess || !selectedMeal}>
+                        <Button onClick={() => handleSubmit('yes')} variant="destructive" className="w-full text-lg py-6" disabled={isSubmitting || !formMess || !formMeal}>
                             <AlertTriangle className="mr-2 h-5 w-5" /> 
                             {isSubmitting ? 'Reporting...' : 'Report Sickness'}
                         </Button>
@@ -374,7 +388,26 @@ export default function MessPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline">{getScorecardTitle()}</CardTitle>
-                        <CardDescription>An aggregated score based on student ratings.</CardDescription>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <Select onValueChange={setFilterMess} defaultValue="all">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter by Mess"/>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Messes</SelectItem>
+                                    {messes.map(mess => <SelectItem key={mess} value={mess}>{mess}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select onValueChange={setFilterMeal} defaultValue="all">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter by Meal"/>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Meals</SelectItem>
+                                    {allMeals.map(meal => <SelectItem key={meal} value={meal}>{meal}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardHeader>
                     <CardContent className="flex flex-col items-center justify-center space-y-4">
                         {scoreLoading ? (
@@ -417,7 +450,7 @@ export default function MessPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">Recent Meal Photos</CardTitle>
-                <CardDescription>A visual log of recently rated meals from various messes.</CardDescription>
+                <CardDescription>A visual log of recently rated meals, filtered by your selection above.</CardDescription>
               </CardHeader>
               <CardContent>
                 {photosLoading ? (
@@ -436,7 +469,10 @@ export default function MessPage() {
                           </div>
                         </div>
                         <div className="p-4">
-                          <Badge variant="secondary">{photo.messName}</Badge>
+                            <div>
+                                <Badge variant="secondary">{photo.messName}</Badge>
+                                <Badge variant="outline" className="ml-2">{photo.mealType}</Badge>
+                            </div>
                           <p className="text-xs text-muted-foreground mt-2">
                             {photo.timestamp ? formatDistanceToNow(photo.timestamp.toDate(), { addSuffix: true }) : ''}
                           </p>
@@ -445,7 +481,7 @@ export default function MessPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-center py-8">No photos have been uploaded recently.</p>
+                  <p className="text-muted-foreground text-center py-8">No photos have been uploaded for the selected filters.</p>
                 )}
               </CardContent>
             </Card>
