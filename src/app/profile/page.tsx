@@ -126,9 +126,12 @@ export default function ProfilePage() {
         enrollmentNumber: data.enrollmentNumber || '',
         hostel: data.hostel || '',
         department: data.department || '',
-        year: data.year || undefined,
         updatedAt: serverTimestamp(),
       };
+
+      if (data.year && !isNaN(data.year)) {
+        userProfileData.year = data.year;
+      }
       
       if (!userProfile) {
         userProfileData.createdAt = serverTimestamp();

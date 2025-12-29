@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -19,42 +18,42 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-4", className)} // Increased padding for Figma spacing
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
+        month: "space-y-6", // More vertical breathing room
+        caption: "flex justify-between pt-1 relative items-center px-2", // "Justify between" for a wider header
+        caption_label: "text-base font-semibold text-slate-900 dark:text-slate-100", // Slightly larger font
+        nav: "flex items-center space-x-1",
         nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          buttonVariants({ variant: "ghost" }), // Using ghost variant for a cleaner look
+          "h-8 w-8 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-slate-100 rounded-full"
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
-        head_row: "flex",
+        nav_button_previous: "", 
+        nav_button_next: "",
+        table: "w-full border-collapse",
+        head_row: "flex mb-2", // Added margin to separate days from dates
         head_cell:
-          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+          "text-slate-400 w-10 font-medium text-[0.8rem] uppercase tracking-wider",
+        row: "flex w-full mt-1",
+        cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent focus-within:relative focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
+          "h-10 w-10 p-0 font-normal rounded-full aria-selected:opacity-100 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
         ),
         day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside: "text-muted-foreground opacity-50",
-        day_disabled: "text-muted-foreground opacity-50",
+          "bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white focus:bg-indigo-600 focus:text-white rounded-full shadow-md",
+        day_today: "bg-slate-100 text-slate-900 font-bold",
+        day_outside: "text-slate-300 opacity-50",
+        day_disabled: "text-slate-200 opacity-50",
         day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+          "aria-selected:bg-indigo-50 aria-selected:text-indigo-900",
         day_hidden: "invisible",
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-5 w-5" />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-5 w-5" />,
       }}
       {...props}
     />
