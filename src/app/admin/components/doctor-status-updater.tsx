@@ -52,7 +52,11 @@ export default function DoctorStatusUpdater() {
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data() as DoctorStatus;
-          form.reset(data);
+          // Ensure emergencyStatus is a string to prevent controlled/uncontrolled error
+          form.reset({
+            ...data,
+            emergencyStatus: data.emergencyStatus || "",
+          });
         } else {
           // Set default form values if no document exists
           form.reset({
