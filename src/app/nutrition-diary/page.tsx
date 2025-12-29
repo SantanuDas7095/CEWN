@@ -183,7 +183,7 @@ export default function NutritionDiaryPage() {
                 </Card>
               ) : (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold font-headline text-center">Logged Meals</h2>
+                  <h2 className="text-2xl font-bold font-headline text-center">Logged Meals for {format(selectedDate, "PPP")}</h2>
                   {filteredLogs.map(log => (
                     <Card key={log.id}>
                         <CardHeader>
@@ -226,5 +226,3 @@ export default function NutritionDiaryPage() {
     </div>
   );
 }
-
-    
