@@ -56,6 +56,11 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
+    // This allows linking Google sign-in with existing email accounts.
+    provider.setCustomParameters({
+      'login_hint': 'user@example.com',
+      'prompt': 'select_account'
+    });
     try {
       await signInWithPopup(auth, provider);
       router.push('/');
