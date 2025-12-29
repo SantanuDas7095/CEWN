@@ -32,7 +32,7 @@ export default function ProfileCard({ user, userProfile, onEdit }: ProfileCardPr
     <div className="space-y-8">
       <div className="flex flex-col items-center">
         <Avatar className="h-32 w-32 border-4 border-primary">
-          <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User'} />
+          <AvatarImage src={userProfile?.photoURL || user.photoURL || undefined} alt={user.displayName || 'User'} />
           <AvatarFallback className="text-4xl">
             {user.displayName?.charAt(0) || user.email?.charAt(0).toUpperCase()}
           </AvatarFallback>
