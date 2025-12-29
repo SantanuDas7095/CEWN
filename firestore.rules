@@ -45,6 +45,7 @@ service cloud.firestore {
     match /appointments/{appointmentId} {
        allow create: if request.auth != null;
        allow read: if isAdmin() || isOwner(resource.data.studentId);
+       // Allow users to list their own appointments, and admins to list all appointments.
        allow list: if isAdmin() || (request.auth != null && request.query.studentId == request.auth.uid);
     }
   }
