@@ -96,7 +96,7 @@ export default function MessPage() {
 
   const recentPhotos = useMemo(() => {
     return filteredRatings
-      .filter(rating => !!rating.imageUrl && isToday(rating.timestamp.toDate()))
+      .filter(rating => !!rating.imageUrl && rating.timestamp && isToday(rating.timestamp.toDate()))
       .slice(0, 6);
   }, [filteredRatings]);
 
