@@ -10,7 +10,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const EmergencyReportSchema = z.object({
   reportId: z.string().describe('Unique identifier for the emergency report.'),
@@ -19,7 +19,7 @@ const EmergencyReportSchema = z.object({
   year: z.number().describe("The student's current year of study."),
   location: z.string().describe('Location of the emergency.'),
   emergencyType: z.string().describe('Type of emergency (medical, safety, fire, etc.).'),
-  timestamp: z.any().describe('Timestamp of the emergency report.'),
+  timestamp: z.string().describe('ISO 8601 string timestamp of the emergency report.'),
 });
 
 const HospitalFeedbackSchema = z.object({
@@ -28,14 +28,14 @@ const HospitalFeedbackSchema = z.object({
   doctorAvailability: z.string().describe('Doctor availability status.'),
   postVisitFeedback: z.string().describe('Feedback provided after the visit.'),
   emergencyVsNormal: z.string().describe('The case type tagged as emergency or normal case'),
-  timestamp: z.any().describe('Timestamp of the feedback.'),
+  timestamp: z.string().describe('ISO 8601 string timestamp of the feedback.'),
 });
 
 const MessFoodRatingSchema = z.object({
   ratingId: z.string().describe('Unique identifier for the food rating.'),
   foodQualityRating: z.number().describe('Rating of the food quality (1-5).'),
   sickAfterMealReport: z.string().describe('Report of feeling sick after the meal.'),
-  timestamp: z.any().describe('Timestamp of the food rating.'),
+  timestamp: z.string().describe('ISO 8601 string timestamp of the food rating.'),
 });
 
 const PredictHealthRisksInputSchema = z.object({
@@ -72,17 +72,17 @@ const prompt = ai.definePrompt({
 
   Emergency Reports:
   {{#each emergencyReports}}
-  - Report ID: {{reportId}}, Student: {{studentName}} ({{enrollmentNumber}}, Year {{year}}), Location: {{location}}, Emergency Type: {{emergencyType}}, Timestamp: {{timestamp.seconds}}
+  - Report ID: {{reportId}}, Student: {{studentName}} ({{enrollmentNumber}}, Year {{year}}), Location: {{location}}, Emergency Type: {{emergencyType}}, Timestamp: {{timestamp}}
   {{/each}}
 
   Hospital Feedback:
   {{#each hospitalFeedbacks}}
-  - Feedback ID: {{feedbackId}}, Waiting Time: {{waitingTime}}, Doctor Availability: {{doctorAvailability}}, Post-Visit Feedback: {{postVisitFeedback}}, Emergency vs Normal: {{emergencyVsNormal}}, Timestamp: {{timestamp.seconds}}
+  - Feedback ID: {{feedbackId}}, Waiting Time: {{waitingTime}}, Doctor Availability: {{doctorAvailability}}, Post-Visit Feedback: {{postVisitFeedback}}, Emergency vs Normal: {{emergencyVsNormal}}, Timestamp: {{timestamp}}
   {{/each}}
 
   Mess Food Ratings:
   {{#each messFoodRatings}}
-  - Rating ID: {{ratingId}}, Food Quality Rating: {{foodQualityRating}}, Sick After Meal Report: {{sickAfterMealReport}}, Timestamp: {{timestamp.seconds}}
+  - Rating ID: {{ratingId}}, Food Quality Rating: {{foodQualityRating}}, Sick After Meal Report: {{sickAfterMealReport}}, Timestamp: {{timestamp}}
   {{/each}}
 
   Based on this data, identify potential health risks, their risk levels (high, medium, low), affected areas, and provide recommendations.

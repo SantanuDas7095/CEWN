@@ -10,7 +10,7 @@ import { predictHealthRisks, type PredictHealthRisksInput, type PredictHealthRis
 import { BrainCircuit, Loader, AlertTriangle, ShieldCheck, Database } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useFirestore } from "@/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, Timestamp } from "firebase/firestore";
 import type { EmergencyReport, HospitalFeedback, MessFoodRating } from "@/lib/types";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
@@ -23,6 +23,23 @@ export default function PredictiveHealth() {
 
   const [inputData, setInputData] = useState<PredictHealthRisksInput | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
+
+  // Helper to convert Firestore data for server action
+  const serializeFirestoreData = (docs: any[], idField: string) => {
+    return docs.map(docData => {
+      const data = { ...docData, [idField]: docData.id };
+      if (data.timestamp && data.timestamp instanceof Timestamp) {
+        data.timestamp = data.timestamp.toDate().toISOString();
+      }
+      // Convert any other Timestamps if necessary
+      for (const key in data) {
+        if (data[key] instanceof Timestamp) {
+          data[key] = data[key].toDate().toISOString();
+        }
+      }
+      return data;
+    });
+  }
 
   const fetchAllData = async () => {
     if (!db) return;
@@ -52,9 +69,9 @@ export default function PredictiveHealth() {
             })
         ]);
         
-        const emergencyReports = emergencySnap.docs.map(doc => ({ ...doc.data(), reportId: doc.id } as any));
-        const hospitalFeedbacks = feedbackSnap.docs.map(doc => ({ ...doc.data(), feedbackId: doc.id } as any));
-        const messFoodRatings = ratingsSnap.docs.map(doc => ({ ...doc.data(), ratingId: doc.id } as any));
+        const emergencyReports = serializeFirestoreData(emergencySnap.docs.map(doc => ({...doc.data(), id: doc.id})), 'reportId');
+        const hospitalFeedbacks = serializeFirestoreData(feedbackSnap.docs.map(doc => ({...doc.data(), id: doc.id})), 'feedbackId');
+        const messFoodRatings = serializeFirestoreData(ratingsSnap.docs.map(doc => ({...doc.data(), id: doc.id})), 'ratingId');
         
         setInputData({ emergencyReports, hospitalFeedbacks, messFoodRatings });
     } catch (e: any) {
