@@ -123,8 +123,9 @@ export default function ProfilePage() {
         photoURL: photoURL,
       });
 
-      const userProfileData: Omit<UserProfile, 'id' | 'email'> & { createdAt?: any } = {
+      const userProfileData: Omit<UserProfile, 'id' | 'email'> & { email: string, createdAt?: any } = {
         uid: user.uid,
+        email: user.email!,
         displayName: data.displayName,
         photoURL: photoURL,
         enrollmentNumber: data.enrollmentNumber || '',
@@ -136,9 +137,7 @@ export default function ProfilePage() {
       
       const userDocRef = doc(db, 'userProfile', user.uid);
       
-      // We check if the document exists to determine if we should add `createdAt`
-      const userDocSnap = await getDoc(userDocRef);
-      if (!userDocSnap.exists()) {
+      if (!userProfile) {
         userProfileData.createdAt = serverTimestamp();
       }
 
@@ -157,11 +156,10 @@ export default function ProfilePage() {
         .catch(error => {
              const permissionError = new FirestorePermissionError({
                 path: `userProfile/${user.uid}`,
-                operation: 'update',
+                operation: userProfile ? 'update' : 'create',
                 requestResourceData: userProfileData,
             }, error);
             errorEmitter.emit('permission-error', permissionError);
-            // We still show a generic toast for the user
             toast({
               title: 'Update Failed',
               description: 'Could not save your profile due to a permissions issue.',
