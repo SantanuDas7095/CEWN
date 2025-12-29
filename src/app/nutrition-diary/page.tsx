@@ -1,19 +1,26 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BookCopy, Loader, Salad, ServerCrash } from 'lucide-react';
 import type { DailyNutritionLog } from '@/lib/types';
-import { format, isToday } from 'date-fns';
+import { format, isToday, startOfToday, endOfToday } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Image from 'next/image';
+
+interface NutritionTotals {
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatGrams: number;
+}
 
 export default function NutritionDiaryPage() {
   const { user, loading: userLoading } = useUser();
@@ -37,7 +44,6 @@ export default function NutritionDiaryPage() {
       setError(null);
       const logsCollection = collection(db, 'nutritionLogs');
       
-      // Simplified query to satisfy security rules
       const q = query(
         logsCollection,
         where("userId", "==", user.uid)
@@ -47,8 +53,8 @@ export default function NutritionDiaryPage() {
         const querySnapshot = await getDocs(q);
         const userLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
         
-        // Sort and filter on the client side
-        const sortedLogs = userLogs.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+        const sortedLogs = userLogs.sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+
         const todaysLogs = sortedLogs.filter(log => isToday(log.timestamp.toDate()));
         
         setLogs(todaysLogs);
@@ -66,6 +72,19 @@ export default function NutritionDiaryPage() {
 
     fetchLogs();
   }, [user, db]);
+
+  const dailyTotals: NutritionTotals = useMemo(() => {
+    return logs.reduce(
+      (totals, log) => {
+        totals.calories += log.calories;
+        totals.proteinGrams += log.proteinGrams;
+        totals.carbsGrams += log.carbsGrams;
+        totals.fatGrams += log.fatGrams;
+        return totals;
+      },
+      { calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0 }
+    );
+  }, [logs]);
 
   if (userLoading || !user) {
     return (
@@ -96,47 +115,81 @@ export default function NutritionDiaryPage() {
               <h3 className="text-xl font-semibold">Failed to Load Diary</h3>
               <p className="text-muted-foreground max-w-md">{error}</p>
             </Card>
-          ) : logs.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center p-12 text-center">
-              <Salad className="h-16 w-16 text-muted-foreground mb-4"/>
-              <h3 className="text-xl font-semibold">No Meals Logged Today</h3>
-              <p className="text-muted-foreground max-w-md">Use the AI Assistant to analyze a meal and save it to your diary.</p>
-            </Card>
           ) : (
-            <div className="space-y-6">
-              {logs.map(log => (
-                <Card key={log.id}>
+            <>
+              {logs.length > 0 && (
+                <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>{format(log.timestamp.toDate(), 'p')}</CardTitle>
+                        <CardTitle>Today's Totals</CardTitle>
+                        <CardDescription>The combined nutritional information from all your meals today.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-                        {log.photoUrl && (
-                            <div className="md:col-span-2">
-                                <Image src={log.photoUrl} alt="Meal photo" width={300} height={200} className="rounded-md object-cover" />
+                    <CardContent>
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-muted p-4 rounded-lg text-center">
+                                <p className="text-sm font-medium text-muted-foreground">Calories</p>
+                                <p className="text-3xl font-bold">{dailyTotals.calories.toFixed(0)}</p>
                             </div>
-                        )}
-                        <div className={`grid grid-cols-2 gap-4 ${log.photoUrl ? 'md:col-span-3' : 'md:col-span-5'}`}>
-                            <div className="bg-muted p-3 rounded-md text-center">
-                                <p className="text-sm text-muted-foreground">Calories</p>
-                                <p className="text-xl font-bold">{log.calories.toFixed(0)}</p>
+                             <div className="bg-muted p-4 rounded-lg text-center">
+                                <p className="text-sm font-medium text-muted-foreground">Protein</p>
+                                <p className="text-3xl font-bold">{dailyTotals.proteinGrams.toFixed(1)}g</p>
                             </div>
-                            <div className="bg-muted p-3 rounded-md text-center">
-                                <p className="text-sm text-muted-foreground">Protein</p>
-                                <p className="text-xl font-bold">{log.proteinGrams.toFixed(1)}g</p>
+                             <div className="bg-muted p-4 rounded-lg text-center">
+                                <p className="text-sm font-medium text-muted-foreground">Carbs</p>
+                                <p className="text-3xl font-bold">{dailyTotals.carbsGrams.toFixed(1)}g</p>
                             </div>
-                            <div className="bg-muted p-3 rounded-md text-center">
-                                <p className="text-sm text-muted-foreground">Carbs</p>
-                                <p className="text-xl font-bold">{log.carbsGrams.toFixed(1)}g</p>
-                            </div>
-                             <div className="bg-muted p-3 rounded-md text-center">
-                                <p className="text-sm text-muted-foreground">Fat</p>
-                                <p className="text-xl font-bold">{log.fatGrams.toFixed(1)}g</p>
+                             <div className="bg-muted p-4 rounded-lg text-center">
+                                <p className="text-sm font-medium text-muted-foreground">Fat</p>
+                                <p className="text-3xl font-bold">{dailyTotals.fatGrams.toFixed(1)}g</p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
-              ))}
-            </div>
+              )}
+
+              {logs.length === 0 ? (
+                <Card className="flex flex-col items-center justify-center p-12 text-center">
+                    <Salad className="h-16 w-16 text-muted-foreground mb-4"/>
+                    <h3 className="text-xl font-semibold">No Meals Logged Today</h3>
+                    <p className="text-muted-foreground max-w-md">Use the AI Assistant to analyze a meal and save it to your diary.</p>
+                </Card>
+              ) : (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold font-headline text-center">Today's Meals</h2>
+                  {logs.map(log => (
+                    <Card key={log.id}>
+                        <CardHeader>
+                            <CardTitle>{format(log.timestamp.toDate(), 'p')}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                            {log.photoUrl && (
+                                <div className="md:col-span-2">
+                                    <Image src={log.photoUrl} alt="Meal photo" width={300} height={200} className="rounded-md object-cover" />
+                                </div>
+                            )}
+                            <div className={`grid grid-cols-2 gap-4 ${log.photoUrl ? 'md:col-span-3' : 'md:col-span-5'}`}>
+                                <div className="bg-muted p-3 rounded-md text-center">
+                                    <p className="text-sm text-muted-foreground">Calories</p>
+                                    <p className="text-xl font-bold">{log.calories.toFixed(0)}</p>
+                                </div>
+                                <div className="bg-muted p-3 rounded-md text-center">
+                                    <p className="text-sm text-muted-foreground">Protein</p>
+                                    <p className="text-xl font-bold">{log.proteinGrams.toFixed(1)}g</p>
+                                </div>
+                                <div className="bg-muted p-3 rounded-md text-center">
+                                    <p className="text-sm text-muted-foreground">Carbs</p>
+                                    <p className="text-xl font-bold">{log.carbsGrams.toFixed(1)}g</p>
+                                </div>
+                                 <div className="bg-muted p-3 rounded-md text-center">
+                                    <p className="text-sm text-muted-foreground">Fat</p>
+                                    <p className="text-xl font-bold">{log.fatGrams.toFixed(1)}g</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
