@@ -115,8 +115,8 @@ export default function AppointmentsList() {
   }
 
   return (
-    <div className="grid md:grid-cols-2 gap-8 items-start">
-        <div>
+    <div className="flex flex-col md:flex-row gap-8 items-start">
+        <div className="w-full md:w-auto">
             <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -124,71 +124,81 @@ export default function AppointmentsList() {
                 className="rounded-md border"
             />
         </div>
-        <div className="rounded-md border">
-        <Table>
-            <TableHeader>
-            <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>Student</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-            </TableHeader>
-            <TableBody>
-            {loading ? (
-                <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                        <Skeleton className="h-12 w-full" />
-                    </TableCell>
-                </TableRow>
-            ) : filteredAppointments.length === 0 ? (
-                <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                    No appointments scheduled for this day.
-                </TableCell>
-                </TableRow>
-            ) : (
-            filteredAppointments.map((appt) => (
-                <TableRow key={appt.id}>
-                <TableCell>
-                    <div className="font-medium">{appt.appointmentTime}</div>
-                </TableCell>
-                <TableCell className="font-medium">
-                    <div>{appt.studentName}</div>
-                    <div className="text-xs text-muted-foreground">{appt.enrollmentNumber}</div>
-                </TableCell>
-                <TableCell className="text-xs max-w-[150px] truncate">{appt.reason}</TableCell>
-                <TableCell>
-                    <Badge variant={getStatusBadge(appt.status)}>
-                    {appt.status}
-                    </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'scheduled')}>
-                        Mark as Scheduled
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
-                        Mark as Completed
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
-                        Mark as Cancelled
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                    </DropdownMenu>
-                </TableCell>
-                </TableRow>
-            )))}
-            </TableBody>
-        </Table>
+        <div className="flex-1 w-full">
+            <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Booked By</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {loading ? (
+                        <TableRow>
+                            <TableCell colSpan={6} className="h-24 text-center">
+                                <Skeleton className="h-12 w-full" />
+                            </TableCell>
+                        </TableRow>
+                    ) : filteredAppointments.length === 0 ? (
+                        <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                            No appointments scheduled for this day.
+                        </TableCell>
+                        </TableRow>
+                    ) : (
+                    filteredAppointments.map((appt) => (
+                        <TableRow key={appt.id}>
+                        <TableCell>
+                            <div className="font-medium">{appt.appointmentTime}</div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                            <div>{appt.studentName}</div>
+                            <div className="text-xs text-muted-foreground">{appt.enrollmentNumber}</div>
+                        </TableCell>
+                        <TableCell className="text-xs max-w-[150px] truncate">{appt.reason}</TableCell>
+                         <TableCell>
+                            {appt.bookedBy === 'admin' ? (
+                                <Badge variant="secondary"><Shield className="h-3 w-3 mr-1"/>Admin</Badge>
+                            ) : (
+                                <Badge variant="outline"><User className="h-3 w-3 mr-1"/>Student</Badge>
+                            )}
+                        </TableCell>
+                        <TableCell>
+                            <Badge variant={getStatusBadge(appt.status)}>
+                            {appt.status}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'scheduled')}>
+                                Mark as Scheduled
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
+                                Mark as Completed
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
+                                Mark as Cancelled
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                        </TableRow>
+                    )))}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     </div>
   );
