@@ -17,13 +17,14 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { MessFoodRating } from "@/lib/types";
+import { MessFoodRating, UserProfile } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow, isToday } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { uploadPhoto } from "../actions";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
 const allMeals = ["Breakfast", "Lunch", "Dinner", "Snacks"];
@@ -35,6 +36,7 @@ export default function MessPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const db = useFirestore();
   const { user, loading } = useUser();
+  const { userProfile } = useUserProfile();
   const router = useRouter();
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -150,9 +152,22 @@ export default function MessPage() {
         if (isSick === 'yes') {
             toast({
                 title: "Sickness Reported",
-                description: "Your report has been sent. Please visit the hospital if you feel unwell.",
+                description: "Your report has been sent to the admin. Please visit the hospital if you feel unwell.",
                 variant: "destructive",
             });
+            
+            // Also create an emergency report for the admin dashboard
+            const reportData = {
+                studentId: user.uid,
+                studentName: userProfile?.displayName || user.displayName || 'Unknown',
+                enrollmentNumber: userProfile?.enrollmentNumber || 'N/A',
+                year: userProfile?.year || 0,
+                location: `${formMess} (${formMeal})`,
+                emergencyType: "Medical",
+                timestamp: serverTimestamp(),
+            };
+            await addDoc(collection(db, "emergencyReports"), reportData);
+
         } else {
             toast({
                 title: "Rating Submitted",
@@ -385,7 +400,7 @@ export default function MessPage() {
                                     />
                                     <path
                                     className={cn("transition-all duration-500", getScoreColor(weeklyScore))}
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155"
                                     fill="none"
                                     stroke="currentColor"
                                     strokeWidth="3"
@@ -454,3 +469,5 @@ export default function MessPage() {
     </div>
   );
 }
+
+    
