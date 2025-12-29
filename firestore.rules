@@ -34,7 +34,7 @@ service cloud.firestore {
     match /hospitalFeedbacks/{feedbackId} {
       allow create: if request.auth != null;
       allow get: if isOwner(request.resource.data.studentId);
-      allow list: if request.auth != null;
+      allow list: if isAdmin();
     }
 
     match /messFoodRatings/{ratingId} {
@@ -49,3 +49,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

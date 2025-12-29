@@ -65,6 +65,7 @@ export default function HospitalPage() {
   const [avgWaitTime, setAvgWaitTime] = useState<number | null>(null);
   const db = useFirestore();
   const { user, loading } = useUser();
+  const { isAdmin } = useAdmin();
   const router = useRouter();
 
   useEffect(() => {
@@ -74,7 +75,7 @@ export default function HospitalPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!db) {
+    if (!db || !isAdmin) { // Only fetch if user is an admin
       setAvgWaitTime(null);
       return;
     }
@@ -100,7 +101,7 @@ export default function HospitalPage() {
     });
 
     return () => unsubscribe();
-  }, [db]);
+  }, [db, isAdmin]);
 
   const feedbackForm = useFeedbackForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
@@ -225,7 +226,7 @@ export default function HospitalPage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {avgWaitTime !== null && (
+            {isAdmin && avgWaitTime !== null && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
@@ -489,3 +490,5 @@ export default function HospitalPage() {
     </div>
   );
 }
+
+    
