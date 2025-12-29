@@ -7,8 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useUser, useStorage, useFirestore } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, User as UserIcon, Pen, Check } from 'lucide-react';
+import { Loader2, User as UserIcon, Check } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -25,7 +24,7 @@ import type { UserProfile } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProfileCard from './components/profile-card';
 import { useUserProfile } from '@/hooks/use-user-profile';
-
+import { uploadPhoto } from '../actions';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -33,7 +32,7 @@ const profileSchema = z.object({
   hostel: z.string().optional(),
   department: z.string().optional(),
   year: z.coerce.number().optional(),
-  photo: z.any().optional(),
+  photo: z.instanceof(File).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -41,7 +40,6 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const { user, loading: userLoading } = useUser();
   const { userProfile, loading: profileLoading } = useUserProfile();
-  const storage = useStorage();
   const db = useFirestore();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +54,6 @@ export default function ProfilePage() {
       hostel: '',
       department: '',
       year: undefined,
-      photo: null,
     },
   });
 
@@ -87,7 +84,6 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    // This will be handled by the useEffect, but as a fallback
     return null;
   }
 
@@ -104,16 +100,21 @@ export default function ProfilePage() {
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!user || !storage || !db) return;
+    if (!user || !db) return;
 
     setIsSubmitting(true);
     let photoURL = userProfile?.photoURL || user.photoURL;
 
     try {
-      if (data.photo && data.photo instanceof File) {
-        const photoRef = ref(storage, `profile-pictures/${user.uid}`);
-        const snapshot = await uploadBytes(photoRef, data.photo);
-        photoURL = await getDownloadURL(snapshot.ref);
+      if (data.photo) {
+        const formData = new FormData();
+        formData.append('photo', data.photo);
+        const result = await uploadPhoto(formData);
+        if (result.success && result.url) {
+          photoURL = result.url;
+        } else {
+          throw new Error(result.error || 'Photo upload failed.');
+        }
       }
 
       const userDocRef = doc(db, 'userProfile', user.uid);
@@ -125,7 +126,7 @@ export default function ProfilePage() {
         enrollmentNumber: data.enrollmentNumber || '',
         hostel: data.hostel || '',
         department: data.department || '',
-        year: data.year || 0,
+        year: data.year || undefined,
         updatedAt: serverTimestamp(),
       };
       
@@ -166,6 +167,7 @@ export default function ProfilePage() {
     } finally {
       setIsSubmitting(false);
       setPhotoPreview(null);
+      form.resetField('photo');
     }
   };
 
@@ -303,5 +305,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
