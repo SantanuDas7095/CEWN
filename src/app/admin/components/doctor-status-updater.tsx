@@ -18,6 +18,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import type { DoctorStatus } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const emergencyStatuses = [
+    "Normal Operations",
+    "Priority Open",
+    "High Alert",
+    "Information Only"
+];
 
 const doctorStatusSchema = z.object({
   name: z.string().min(2, "Doctor's name is required."),
@@ -39,7 +47,7 @@ export default function DoctorStatusUpdater() {
       name: "",
       specialty: "",
       isAvailable: true,
-      emergencyStatus: "",
+      emergencyStatus: "Normal Operations",
     },
   });
 
@@ -52,18 +60,16 @@ export default function DoctorStatusUpdater() {
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data() as DoctorStatus;
-          // Ensure emergencyStatus is a string to prevent controlled/uncontrolled error
           form.reset({
             ...data,
-            emergencyStatus: data.emergencyStatus || "",
+            emergencyStatus: data.emergencyStatus || "Normal Operations",
           });
         } else {
-          // Set default form values if no document exists
           form.reset({
             name: "Dr. A. K. Singh",
             specialty: "General Physician",
             isAvailable: true,
-            emergencyStatus: "Priority Open",
+            emergencyStatus: "Normal Operations",
           });
         }
         setLoading(false);
@@ -171,10 +177,19 @@ export default function DoctorStatusUpdater() {
                 name="emergencyStatus"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Emergency Status Text</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Priority Open" {...field} />
-                    </FormControl>
+                    <FormLabel>Emergency Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select an emergency status" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {emergencyStatuses.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
