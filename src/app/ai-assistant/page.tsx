@@ -173,8 +173,10 @@ export default function AiAssistantPage() {
             timestamp: serverTimestamp(),
             photoUrl: photoUrl || '',
         };
+        
+        const logsCollectionRef = collection(db, "userProfile", user.uid, "nutritionLogs");
   
-        await addDoc(collection(db, "nutritionLogs"), logData);
+        await addDoc(logsCollectionRef, logData);
         
         toast({
             title: "Meal Saved!",
@@ -184,7 +186,7 @@ export default function AiAssistantPage() {
     } catch (error: any) {
         if (error.code && error.code.includes('permission-denied')) {
             const permissionError = new FirestorePermissionError({
-                path: 'nutritionLogs',
+                path: `userProfile/${user.uid}/nutritionLogs`,
                 operation: 'create',
                 requestResourceData: { userId: user.uid },
             }, error);
@@ -362,5 +364,3 @@ export default function AiAssistantPage() {
     </div>
   );
 }
-
-    

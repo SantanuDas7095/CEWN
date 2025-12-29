@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -47,23 +47,25 @@ export default function NutritionDiaryPage() {
     const fetchLogs = async () => {
       setLoading(true);
       setError(null);
-      const logsCollection = collection(db, 'nutritionLogs');
       
-      const q = query(
-        logsCollection,
-        where("userId", "==", user.uid)
-      );
+      const logsCollectionRef = collection(db, 'userProfile', user.uid, 'nutritionLogs');
+      const q = query(logsCollectionRef);
 
       try {
         const querySnapshot = await getDocs(q);
         const userLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
         
-        const sortedLogs = userLogs.sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+        // Sort logs on the client-side
+        const sortedLogs = userLogs.sort((a, b) => {
+            const timeA = a.timestamp?.toDate().getTime() || 0;
+            const timeB = b.timestamp?.toDate().getTime() || 0;
+            return timeB - timeA;
+        });
         
         setAllLogs(sortedLogs);
       } catch (error) {
         const permissionError = new FirestorePermissionError({
-          path: logsCollection.path,
+          path: logsCollectionRef.path,
           operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
@@ -77,7 +79,7 @@ export default function NutritionDiaryPage() {
   }, [user, db]);
 
   const filteredLogs = useMemo(() => {
-    return allLogs.filter(log => isSameDay(log.timestamp.toDate(), selectedDate));
+    return allLogs.filter(log => log.timestamp && isSameDay(log.timestamp.toDate(), selectedDate));
   }, [allLogs, selectedDate]);
 
   const dailyTotals: NutritionTotals = useMemo(() => {
@@ -187,7 +189,7 @@ export default function NutritionDiaryPage() {
                   {filteredLogs.map(log => (
                     <Card key={log.id}>
                         <CardHeader>
-                            <CardTitle>{format(log.timestamp.toDate(), 'p')}</CardTitle>
+                            <CardTitle>{log.timestamp ? format(log.timestamp.toDate(), 'p') : 'Just now'}</CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                             {log.photoUrl && (

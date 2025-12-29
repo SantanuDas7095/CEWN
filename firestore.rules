@@ -15,17 +15,15 @@ service cloud.firestore {
     match /userProfile/{userId} {
       allow get, update, create: if isOwner(userId);
       allow list: if isAdmin();
+      
+      match /nutritionLogs/{logId} {
+        allow read, write: if isOwner(userId);
+      }
     }
     
     match /roles_admin/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-    }
-
-    match /nutritionLogs/{logId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read: if isOwner(request.resource.data.userId);
-      allow list: if request.auth.uid == request.query.where.userId;
     }
 
     match /emergencyReports/{reportId} {
