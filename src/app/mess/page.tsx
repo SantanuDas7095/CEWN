@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { MessFoodRating } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isToday } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { uploadPhoto } from "../actions";
@@ -95,7 +95,9 @@ export default function MessPage() {
   }, [filteredRatings]);
 
   const recentPhotos = useMemo(() => {
-    return filteredRatings.filter(rating => !!rating.imageUrl).slice(0, 6);
+    return filteredRatings
+      .filter(rating => !!rating.imageUrl && isToday(rating.timestamp.toDate()))
+      .slice(0, 6);
   }, [filteredRatings]);
 
 
@@ -408,8 +410,8 @@ export default function MessPage() {
           <div className="mt-12">
             <Card>
               <CardHeader>
-                <CardTitle className="font-headline text-2xl">Recent Meal Photos</CardTitle>
-                <CardDescription>A visual log of recently rated meals, filtered by your selection above.</CardDescription>
+                <CardTitle className="font-headline text-2xl">Today's Meal Photos</CardTitle>
+                <CardDescription>A visual log of today's rated meals, filtered by your selection above.</CardDescription>
               </CardHeader>
               <CardContent>
                 {dataLoading ? (
@@ -440,7 +442,7 @@ export default function MessPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-center py-8">No photos have been uploaded for the selected filters.</p>
+                  <p className="text-muted-foreground text-center py-8">No photos have been uploaded for the selected filters today.</p>
                 )}
               </CardContent>
             </Card>
@@ -452,5 +454,7 @@ export default function MessPage() {
     </div>
   );
 }
+
+    
 
     
