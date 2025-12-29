@@ -347,7 +347,7 @@ export default function HospitalPage() {
                           name="enrollmentNumber"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Enrollment Number</FormLabel>
+                              <FormLabel>Enrollment Number / Employee ID</FormLabel>
                               <FormControl>
                                 <Input placeholder="e.g. 20-UCD-034" {...field} />
                               </FormControl>

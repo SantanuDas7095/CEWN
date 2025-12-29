@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Header } from "@/components/common/header";
@@ -188,7 +189,7 @@ export default function SosPage() {
                   />
                 </div>
                  <div className="space-y-2">
-                  <Label htmlFor="enrollmentNumber">Enrollment Number</Label>
+                  <Label htmlFor="enrollmentNumber">Enrollment Number / Employee ID</Label>
                   <Input 
                     id="enrollmentNumber" 
                     placeholder="e.g., 20-UCD-034"
