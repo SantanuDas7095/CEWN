@@ -10,20 +10,20 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { addDoc, collection, serverTimestamp, onSnapshot, query, where, QueryConstraint, orderBy, limit } from "firebase/firestore";
-import { useFirestore, useUser, useStorage } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { MessFoodRating } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { uploadPhoto } from "../actions";
 
 const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
 const meals = ["Breakfast", "Lunch", "Dinner"];
@@ -34,7 +34,6 @@ export default function MessPage() {
   const [weeklyScore, setWeeklyScore] = useState(0);
   const [scoreLoading, setScoreLoading] = useState(true);
   const db = useFirestore();
-  const storage = useStorage();
   const { user, loading } = useUser();
   const router = useRouter();
   const [photo, setPhoto] = useState<File | null>(null);
@@ -141,7 +140,7 @@ export default function MessPage() {
   };
 
   const handleSubmit = async (isSick: 'yes' | 'no') => {
-    if (!user || !db || !storage || !selectedMess || !selectedMeal) {
+    if (!user || !db || !selectedMess || !selectedMeal) {
         toast({ title: "Incomplete Form", description: "Please select a mess and a meal before submitting.", variant: "destructive" });
         return;
     }
@@ -150,9 +149,14 @@ export default function MessPage() {
     try {
         let imageUrl: string | undefined = undefined;
         if (photo) {
-            const photoRef = ref(storage, `mess-photos/${user.uid}/${Date.now()}_${photo.name}`);
-            const snapshot = await uploadBytes(photoRef, photo);
-            imageUrl = await getDownloadURL(snapshot.ref);
+            const formData = new FormData();
+            formData.append('photo', photo);
+            const result = await uploadPhoto(formData);
+            if (result.success && result.url) {
+                imageUrl = result.url;
+            } else {
+                throw new Error(result.error || 'Photo upload failed.');
+            }
         }
 
         const ratingData: Omit<MessFoodRating, 'id'> = {
@@ -202,7 +206,7 @@ export default function MessPage() {
             console.error("Error submitting rating:", error);
             toast({
                 title: "Error",
-                description: "An unexpected error occurred. Could not submit your report.",
+                description: error.message || "An unexpected error occurred. Could not submit your report.",
                 variant: "destructive",
             });
         }
