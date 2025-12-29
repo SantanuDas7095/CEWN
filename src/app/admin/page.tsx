@@ -100,7 +100,7 @@ export default function AdminPage() {
               <Card>
                   <CardHeader>
                     <CardTitle>Manage Appointments</CardTitle>
-                    <CardDescription>Select a date on the calendar to view and manage that day's appointments.</CardDescription>
+                    <CardDescription>Select a date to view and manage that day's appointments.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <AppointmentsList />
