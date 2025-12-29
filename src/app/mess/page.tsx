@@ -9,7 +9,6 @@ import { Soup, Star, AlertTriangle, Utensils, Camera, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
-import { Progress } from "@/components/ui/progress";
 import { addDoc, collection, serverTimestamp, onSnapshot, query, where, QueryConstraint, orderBy, limit } from "firebase/firestore";
 import { useFirestore, useUser, useStorage } from "@/firebase";
 import { useRouter } from "next/navigation";
@@ -24,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
 const meals = ["Breakfast", "Lunch", "Dinner"];
@@ -165,33 +165,32 @@ export default function MessPage() {
             ...(imageUrl && { imageUrl }),
         };
 
-        try {
-            await addDoc(collection(db, "messFoodRatings"), ratingData);
-            
-            if (isSick === 'yes') {
-                toast({
-                    title: "Sickness Reported",
-                    description: "Your report has been sent. Please visit the hospital if you feel unwell.",
-                    variant: "destructive",
-                });
-            } else {
-                toast({
-                    title: "Rating Submitted",
-                    description: `You rated today's food ${rating} out of 5. Thank you!`,
-                });
-            }
-            // Reset form state
-            setRating(3);
-            setSelectedMess("");
-            setSelectedMeal("");
-            setPhoto(null);
-            setPhotoPreview(null);
+        await addDoc(collection(db, "messFoodRatings"), ratingData);
 
-        } catch (error) {
+        if (isSick === 'yes') {
+            toast({
+                title: "Sickness Reported",
+                description: "Your report has been sent. Please visit the hospital if you feel unwell.",
+                variant: "destructive",
+            });
+        } else {
+            toast({
+                title: "Rating Submitted",
+                description: `You rated today's food ${rating} out of 5. Thank you!`,
+            });
+        }
+        // Reset form state
+        setRating(3);
+        setSelectedMess("");
+        setSelectedMeal("");
+        setPhoto(null);
+        setPhotoPreview(null);
+    } catch (error: any) {
+        if (error.code && error.code.includes('permission-denied')) {
             const permissionError = new FirestorePermissionError({
                 path: 'messFoodRatings',
                 operation: 'create',
-                requestResourceData: ratingData,
+                requestResourceData: { studentId: user.uid },
             }, error);
             errorEmitter.emit('permission-error', permissionError);
             toast({
@@ -199,15 +198,14 @@ export default function MessPage() {
                 description: "Could not save your rating due to a permission issue.",
                 variant: "destructive",
             });
+        } else {
+            console.error("Error submitting rating:", error);
+            toast({
+                title: "Error",
+                description: "An unexpected error occurred. Could not submit your report.",
+                variant: "destructive",
+            });
         }
-
-    } catch (error) {
-        console.error("Error submitting rating:", error);
-        toast({
-            title: "Error",
-            description: "An unexpected error occurred. Could not submit your report.",
-            variant: "destructive",
-        });
     } finally {
         setIsSubmitting(false);
     }
@@ -226,6 +224,21 @@ export default function MessPage() {
     if (selectedMeal) return `${selectedMeal} Score`;
     return 'Overall Hygiene Scorecard';
   }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-500";
+    if (score >= 60) return "text-yellow-500";
+    if (score >= 40) return "text-orange-500";
+    return "text-red-500";
+  };
+  
+  const getScoreDescription = (score: number) => {
+    if (score === 0 && !scoreLoading) return "No Data";
+    if (score >= 80) return "Excellent";
+    if (score >= 60) return "Good";
+    if (score >= 40) return "Fair";
+    return "Poor";
+  };
 
   if (loading || !user) {
     return (
@@ -359,26 +372,38 @@ export default function MessPage() {
                         <CardTitle className="font-headline">{getScorecardTitle()}</CardTitle>
                         <CardDescription>An aggregated score based on student ratings.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="flex flex-col items-center justify-center space-y-4">
                         {scoreLoading ? (
-                           <div className="space-y-2">
-                                <div className="flex justify-between items-baseline">
-                                   <Skeleton className="h-6 w-24" />
-                                   <Skeleton className="h-8 w-16" />
-                                </div>
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-3 w-3/4" />
-                           </div>
+                           <Skeleton className="h-48 w-48 rounded-full" />
                         ) : (
-                            <>
-                                <div className="flex justify-between items-baseline">
-                                <span className="font-medium">Average Score</span>
-                                <span className="text-3xl font-bold text-primary">{weeklyScore}%</span>
+                            <div className="relative h-48 w-48">
+                                <svg className="h-full w-full" viewBox="0 0 36 36">
+                                    <path
+                                    className="text-muted/20"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    />
+                                    <path
+                                    className={cn("transition-all duration-500", getScoreColor(weeklyScore))}
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    strokeDasharray={`${weeklyScore}, 100`}
+                                    strokeLinecap="round"
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span className={cn("text-4xl font-bold", getScoreColor(weeklyScore))}>
+                                        {weeklyScore}%
+                                    </span>
+                                    <span className="text-sm font-medium text-muted-foreground">{getScoreDescription(weeklyScore)}</span>
                                 </div>
-                                <Progress value={weeklyScore} className="h-4" />
-                                <p className="text-xs text-muted-foreground">This score reflects all available historical data for the selection.</p>
-                            </>
+                            </div>
                         )}
+                         <p className="text-xs text-muted-foreground text-center">This score reflects all available historical data for the selection.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -409,7 +434,7 @@ export default function MessPage() {
                         <div className="p-4">
                           <Badge variant="secondary">{photo.messName}</Badge>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {formatDistanceToNow(photo.timestamp.toDate(), { addSuffix: true })}
+                            {photo.timestamp ? formatDistanceToNow(photo.timestamp.toDate(), { addSuffix: true }) : ''}
                           </p>
                         </div>
                       </Card>
@@ -428,5 +453,3 @@ export default function MessPage() {
     </div>
   );
 }
-
-    
