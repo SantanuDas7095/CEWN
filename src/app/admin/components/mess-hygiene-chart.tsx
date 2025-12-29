@@ -9,16 +9,20 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ChartData = {
   day: string;
   [key: string]: number | string; // Allows for dynamic mess names
 }
 
+const meals = ["All Meals", "Breakfast", "Lunch", "Dinner", "Snacks"];
+
 export default function MessHygieneChart() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [messes, setMesses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMeal, setSelectedMeal] = useState("All Meals");
   const db = useFirestore();
 
   const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--primary))"];
@@ -34,7 +38,9 @@ export default function MessHygieneChart() {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.messName && data.timestamp) {
+        const mealMatch = selectedMeal === "All Meals" || data.mealType === selectedMeal;
+
+        if (data.messName && data.timestamp && mealMatch) {
           const messName = data.messName;
           messSet.add(messName);
           const day = format(data.timestamp.toDate(), 'yyyy-MM-dd');
@@ -75,45 +81,60 @@ export default function MessHygieneChart() {
     });
 
     return () => unsubscribe();
-  }, [db]);
+  }, [db, selectedMeal]);
 
   if (loading) {
     return <Skeleton className="h-[350px] w-full" />
   }
 
-  if (chartData.length === 0) {
-    return (
-      <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">
-        No mess rating data available.
-      </div>
-    )
-  }
-
   return (
-    <div className="h-[350px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis 
-            dataKey="day" 
-            stroke="hsl(var(--foreground))"
-            fontSize={12} 
-            tickFormatter={(str) => format(new Date(str), 'MMM d')}
-          />
-          <YAxis stroke="hsl(var(--foreground))" fontSize={12} domain={[1, 5]} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "hsl(var(--card))",
-              borderColor: "hsl(var(--border))",
-            }}
-            labelFormatter={(label) => format(new Date(label), 'PPP')}
-          />
-          <Legend wrapperStyle={{fontSize: "12px"}}/>
-          {messes.map((mess, i) => (
-             <Line key={mess} type="monotone" dataKey={mess} stroke={colors[i % colors.length]} strokeWidth={2} name={mess} />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+    <div className="space-y-4">
+        <div className="flex justify-end">
+             <div className="w-48">
+                 <Select onValueChange={setSelectedMeal} defaultValue={selectedMeal}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select a meal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {meals.map(meal => (
+                            <SelectItem key={meal} value={meal}>{meal}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+        
+        {chartData.length === 0 ? (
+            <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">
+                No mess rating data available for the selected filter.
+            </div>
+        ) : (
+            <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis 
+                    dataKey="day" 
+                    stroke="hsl(var(--foreground))"
+                    fontSize={12} 
+                    tickFormatter={(str) => format(new Date(str), 'MMM d')}
+                />
+                <YAxis stroke="hsl(var(--foreground))" fontSize={12} domain={[1, 5]} />
+                <Tooltip
+                    contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    borderColor: "hsl(var(--border))",
+                    }}
+                    labelFormatter={(label) => format(new Date(label), 'PPP')}
+                />
+                <Legend wrapperStyle={{fontSize: "12px"}}/>
+                {messes.map((mess, i) => (
+                    <Line key={mess} type="monotone" dataKey={mess} stroke={colors[i % colors.length]} strokeWidth={2} name={mess} />
+                ))}
+                </LineChart>
+            </ResponsiveContainer>
+            </div>
+        )}
     </div>
   )
 }

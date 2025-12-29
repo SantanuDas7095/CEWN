@@ -88,7 +88,7 @@ export default function AdminPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Mess Hygiene Trends</CardTitle>
-                  <CardDescription>Daily average food quality ratings across all hostels.</CardDescription>
+                  <CardDescription>Average food quality ratings. Use the dropdown to filter by meal.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <MessHygieneChart />
