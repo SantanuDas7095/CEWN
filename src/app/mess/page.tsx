@@ -6,7 +6,7 @@ import { Footer } from "@/components/common/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Soup, Star, AlertTriangle, Utensils, Camera, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { addDoc, collection, serverTimestamp, onSnapshot, query, where, QueryConstraint, orderBy, limit } from "firebase/firestore";
@@ -31,8 +31,8 @@ const allMeals = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 export default function MessPage() {
   const [rating, setRating] = useState(3);
   const { toast } = useToast();
-  const [weeklyScore, setWeeklyScore] = useState(0);
-  const [scoreLoading, setScoreLoading] = useState(true);
+  const [allRatings, setAllRatings] = useState<MessFoodRating[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const db = useFirestore();
   const { user, loading } = useUser();
   const router = useRouter();
@@ -48,97 +48,56 @@ export default function MessPage() {
   const [filterMess, setFilterMess] = useState<string>("all");
   const [filterMeal, setFilterMeal] = useState<string>("all");
 
-  const [recentPhotos, setRecentPhotos] = useState<MessFoodRating[]>([]);
-  const [photosLoading, setPhotosLoading] = useState(true);
-
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
-
   useEffect(() => {
     if (!db) return;
-    setScoreLoading(true);
+    setDataLoading(true);
 
-    const constraints: QueryConstraint[] = [];
-    if (filterMess !== "all") {
-        constraints.push(where("messName", "==", filterMess));
-    }
-    if (filterMeal !== "all") {
-        constraints.push(where("mealType", "==", filterMeal));
-    }
-
-    const ratingsQuery = query(collection(db, "messFoodRatings"), ...constraints);
+    const ratingsQuery = query(collection(db, "messFoodRatings"), orderBy("timestamp", "desc"));
 
     const unsubscribe = onSnapshot(ratingsQuery, (querySnapshot) => {
-      if(querySnapshot.empty) {
-        setWeeklyScore(0);
-        setScoreLoading(false);
-        return;
-      }
-      let totalRating = 0;
-      let ratingCount = 0;
+      const ratings: MessFoodRating[] = [];
       querySnapshot.forEach((doc) => {
-        totalRating += doc.data().foodQualityRating;
-        ratingCount++;
+        ratings.push({ id: doc.id, ...doc.data() } as MessFoodRating);
       });
-      const avgRating = totalRating / ratingCount;
-      setWeeklyScore(Math.round((avgRating / 5) * 100));
-      setScoreLoading(false);
+      setAllRatings(ratings);
+      setDataLoading(false);
     }, (error) => {
         const permissionError = new FirestorePermissionError({
             path: 'messFoodRatings',
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
-        setScoreLoading(false);
-        setWeeklyScore(0);
+        setDataLoading(false);
     });
 
     return () => unsubscribe();
-  }, [db, filterMess, filterMeal]);
+  }, [db]);
 
-  useEffect(() => {
-    if(!db) return;
-    setPhotosLoading(true);
-
-    const constraints: QueryConstraint[] = [orderBy("timestamp", "desc"), limit(20)];
-    if(filterMess !== "all") {
-        constraints.unshift(where("messName", "==", filterMess));
-    }
-    if(filterMeal !== "all") {
-        constraints.unshift(where("mealType", "==", filterMeal));
-    }
-
-    const photosQuery = query(
-        collection(db, "messFoodRatings"), 
-        ...constraints
-    );
-
-    const unsubscribe = onSnapshot(photosQuery, (snapshot) => {
-        const photos: MessFoodRating[] = [];
-        snapshot.forEach(doc => {
-            const data = doc.data() as MessFoodRating;
-            if(data.imageUrl) {
-                photos.push({ id: doc.id, ...data});
-            }
-        });
-        setRecentPhotos(photos.slice(0, 6)); // Take first 6 with photos
-        setPhotosLoading(false);
-    }, (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'messFoodRatings',
-            operation: 'list',
-        }, error);
-        errorEmitter.emit('permission-error', permissionError);
-        setPhotosLoading(false);
+  const filteredRatings = useMemo(() => {
+    return allRatings.filter(rating => {
+      const messMatch = filterMess === 'all' || rating.messName === filterMess;
+      const mealMatch = filterMeal === 'all' || rating.mealType === filterMeal;
+      return messMatch && mealMatch;
     });
+  }, [allRatings, filterMess, filterMeal]);
 
-    return () => unsubscribe();
+  const weeklyScore = useMemo(() => {
+    if (filteredRatings.length === 0) return 0;
+    const totalRating = filteredRatings.reduce((acc, rating) => acc + rating.foodQualityRating, 0);
+    const avgRating = totalRating / filteredRatings.length;
+    return Math.round((avgRating / 5) * 100);
+  }, [filteredRatings]);
 
-  }, [db, filterMess, filterMeal]);
+  const recentPhotos = useMemo(() => {
+    return filteredRatings.filter(rating => !!rating.imageUrl).slice(0, 6);
+  }, [filteredRatings]);
+
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -251,7 +210,7 @@ export default function MessPage() {
   };
   
   const getScoreDescription = (score: number) => {
-    if (score === 0 && !scoreLoading) return "No Data";
+    if (filteredRatings.length === 0 && !dataLoading) return "No Data";
     if (score >= 80) return "Excellent";
     if (score >= 60) return "Good";
     if (score >= 40) return "Fair";
@@ -410,7 +369,7 @@ export default function MessPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="flex flex-col items-center justify-center space-y-4">
-                        {scoreLoading ? (
+                        {dataLoading ? (
                            <Skeleton className="h-48 w-48 rounded-full" />
                         ) : (
                             <div className="relative h-48 w-48">
@@ -434,7 +393,7 @@ export default function MessPage() {
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                                     <span className={cn("text-4xl font-bold", getScoreColor(weeklyScore))}>
-                                        {weeklyScore}%
+                                        {filteredRatings.length > 0 ? `${weeklyScore}%` : 'N/A'}
                                     </span>
                                     <span className="text-sm font-medium text-muted-foreground">{getScoreDescription(weeklyScore)}</span>
                                 </div>
@@ -453,7 +412,7 @@ export default function MessPage() {
                 <CardDescription>A visual log of recently rated meals, filtered by your selection above.</CardDescription>
               </CardHeader>
               <CardContent>
-                {photosLoading ? (
+                {dataLoading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
                   </div>
@@ -493,3 +452,5 @@ export default function MessPage() {
     </div>
   );
 }
+
+    
