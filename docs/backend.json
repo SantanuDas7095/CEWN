@@ -126,6 +126,17 @@
             "photoUrl": { "type": "string", "format": "uri" }
         },
         "required": ["userId", "timestamp", "calories", "proteinGrams", "carbsGrams", "fatGrams"]
+    },
+    "DoctorStatus": {
+      "title": "Doctor Status",
+      "description": "Represents the current status of the doctor in the campus hospital.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the doctor." },
+        "specialty": { "type": "string", "description": "The doctor's specialty." },
+        "isAvailable": { "type": "boolean", "description": "Whether the doctor is currently available." }
+      },
+      "required": ["name", "specialty", "isAvailable"]
     }
   },
   "auth": {
@@ -159,6 +170,10 @@
     "/userProfile/{userId}/nutritionLogs/{logId}": {
       "schema": { "$ref": "#/entities/DailyNutritionLog" },
       "description": "Stores a user's daily nutrition logs in a sub-collection under their profile."
+    },
+    "/campusInfo/hospital": {
+      "schema": { "$ref": "#/entities/DoctorStatus" },
+      "description": "A singleton document holding the current hospital status."
     }
   }
 }

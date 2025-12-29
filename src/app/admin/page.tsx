@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -13,6 +14,7 @@ import ResponseTimeChart from './components/response-time-chart';
 import MessHygieneChart from './components/mess-hygiene-chart';
 import PredictiveHealth from './components/predictive-health';
 import AppointmentsList from './components/appointments-list';
+import DoctorStatusUpdater from './components/doctor-status-updater';
 
 export default function AdminPage() {
   const { isAdmin, loading } = useAdmin();
@@ -72,15 +74,18 @@ export default function AdminPage() {
                     <LiveAlerts />
                   </CardContent>
                 </Card>
-                <Card className="lg:col-span-3">
-                  <CardHeader>
-                    <CardTitle>Hospital Response Time</CardTitle>
-                    <CardDescription>Average emergency response time this week (in minutes).</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponseTimeChart />
-                  </CardContent>
-                </Card>
+                <div className="lg:col-span-3 space-y-4">
+                    <Card>
+                    <CardHeader>
+                        <CardTitle>Hospital Response Time</CardTitle>
+                        <CardDescription>Average emergency response time this week (in minutes).</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponseTimeChart />
+                    </CardContent>
+                    </Card>
+                    <DoctorStatusUpdater />
+                </div>
               </div>
               <Card>
                 <CardHeader>

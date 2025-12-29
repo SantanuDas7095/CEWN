@@ -47,7 +47,10 @@ service cloud.firestore {
        allow read: if isAdmin() || isOwner(resource.data.studentId);
        allow list: if isAdmin() || (request.auth != null && request.query.where.studentId == request.auth.uid);
     }
+
+    match /campusInfo/hospital {
+      allow get: if true;
+      allow write: if isAdmin();
+    }
   }
 }
-
-    

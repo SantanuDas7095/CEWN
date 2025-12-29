@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Header } from "@/components/common/header";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Stethoscope, Users, Calendar as CalendarIcon, BookMarked } from "lucide-react";
+import { Clock, Stethoscope, Users, Calendar as CalendarIcon, BookMarked, BadgeCheck, BadgeAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, useForm as useFeedbackForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,12 +34,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp, doc } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { useAdmin } from "@/hooks/use-admin";
+import type { DoctorStatus } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const feedbackSchema = z.object({
   caseType: z.enum(["normal", "emergency"], { required_error: "Please select a case type." }),
@@ -63,6 +66,8 @@ const timeSlots = [
 export default function HospitalPage() {
   const { toast } = useToast();
   const [avgWaitTime, setAvgWaitTime] = useState<number | null>(null);
+  const [doctorStatus, setDoctorStatus] = useState<DoctorStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
   const db = useFirestore();
   const { user, loading } = useUser();
   const router = useRouter();
@@ -74,13 +79,12 @@ export default function HospitalPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!db || !user) {
-      return;
-    }
+    if (!db) return;
+    
+    // Fetch average wait time
     const feedbacksCol = collection(db, "hospitalFeedbacks");
-    const q = query(feedbacksCol);
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const feedbackQuery = query(feedbacksCol);
+    const unsubFeedback = onSnapshot(feedbackQuery, (querySnapshot) => {
       if (querySnapshot.empty) {
         setAvgWaitTime(0);
         return;
@@ -98,8 +102,27 @@ export default function HospitalPage() {
         errorEmitter.emit('permission-error', permissionError);
     });
 
-    return () => unsubscribe();
-  }, [db, user]);
+    // Fetch doctor status
+    const hospitalDocRef = doc(db, "campusInfo", "hospital");
+    const unsubDoctor = onSnapshot(hospitalDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setDoctorStatus(docSnap.data() as DoctorStatus);
+        }
+        setStatusLoading(false);
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: hospitalDocRef.path,
+            operation: 'get',
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        setStatusLoading(false);
+    });
+
+    return () => {
+        unsubFeedback();
+        unsubDoctor();
+    };
+  }, [db]);
 
   const feedbackForm = useFeedbackForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
@@ -224,28 +247,46 @@ export default function HospitalPage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {avgWaitTime !== null && (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{avgWaitTime} min</div>
-                  <p className="text-xs text-muted-foreground">Based on recent patient feedback</p>
-                </CardContent>
-              </Card>
-            )}
+             <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {avgWaitTime === null ? (
+                    <Skeleton className="h-8 w-24" />
+                ) : (
+                    <div className="text-2xl font-bold">{avgWaitTime} min</div>
+                )}
+                <p className="text-xs text-muted-foreground">Based on recent patient feedback</p>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Doctor Availability</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">Available</div>
-                <p className="text-xs text-muted-foreground">Dr. A. K. Singh (General Physician)</p>
+                {statusLoading ? (
+                    <>
+                        <Skeleton className="h-8 w-32" />
+                        <Skeleton className="h-4 w-48 mt-1" />
+                    </>
+                ) : doctorStatus ? (
+                    <>
+                        <div className="text-2xl font-bold flex items-center gap-2">
+                            {doctorStatus.isAvailable ? <BadgeCheck className="text-green-500" /> : <BadgeAlert className="text-yellow-500" />}
+                            {doctorStatus.isAvailable ? "Available" : "Unavailable"}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{doctorStatus.name} ({doctorStatus.specialty})</p>
+                    </>
+                ) : (
+                    <p>Status not available</p>
+                )}
               </CardContent>
             </Card>
+
             <Card className="bg-primary text-primary-foreground">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-primary-foreground/80">Emergency Status</CardTitle>

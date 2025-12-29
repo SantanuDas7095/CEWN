@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type EmergencyReport = {
@@ -67,3 +68,9 @@ export type DailyNutritionLog = {
     fatGrams: number;
     photoUrl?: string;
 }
+
+export type DoctorStatus = {
+    name: string;
+    specialty: string;
+    isAvailable: boolean;
+};
