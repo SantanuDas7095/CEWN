@@ -10,14 +10,10 @@ import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BookCopy, Loader, Salad, ServerCrash, Calendar as CalendarIcon } from 'lucide-react';
 import type { DailyNutritionLog } from '@/lib/types';
-import { format, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 
 interface NutritionTotals {
     calories: number;
@@ -31,7 +27,6 @@ export default function NutritionDiaryPage() {
   const db = useFirestore();
   const router = useRouter();
   const [allLogs, setAllLogs] = useState<DailyNutritionLog[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,24 +64,7 @@ export default function NutritionDiaryPage() {
 
     fetchLogs();
   }, [user, db]);
-
-  const filteredLogs = useMemo(() => {
-    return allLogs.filter(log => log.timestamp && isSameDay(log.timestamp.toDate(), selectedDate));
-  }, [allLogs, selectedDate]);
-
-  const dailyTotals: NutritionTotals = useMemo(() => {
-    return filteredLogs.reduce(
-      (totals, log) => {
-        totals.calories += log.calories;
-        totals.proteinGrams += log.proteinGrams;
-        totals.carbsGrams += log.carbsGrams;
-        totals.fatGrams += log.fatGrams;
-        return totals;
-      },
-      { calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0 }
-    );
-  }, [filteredLogs]);
-
+  
   if (userLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -104,28 +82,6 @@ export default function NutritionDiaryPage() {
             <BookCopy className="mx-auto h-12 w-12 text-primary" />
             <h1 className="text-4xl font-bold font-headline">Nutrition Diary</h1>
             <p className="text-lg text-muted-foreground">Your daily log of meals and nutritional intake.</p>
-             <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                    variant={"outline"}
-                    className={cn(
-                        "w-[280px] justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
-                    )}
-                    >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => setSelectedDate(date || new Date())}
-                    initialFocus
-                    />
-                </PopoverContent>
-            </Popover>
           </div>
 
           {loading ? (
@@ -140,48 +96,18 @@ export default function NutritionDiaryPage() {
             </Card>
           ) : (
             <>
-              {filteredLogs.length > 0 && (
-                <Card className="mb-8">
-                    <CardHeader>
-                        <CardTitle>Totals for {format(selectedDate, 'PPP')}</CardTitle>
-                        <CardDescription>The combined nutritional information from all your meals on this day.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-muted p-4 rounded-lg text-center">
-                                <p className="text-sm font-medium text-muted-foreground">Calories</p>
-                                <p className="text-3xl font-bold">{dailyTotals.calories.toFixed(0)}</p>
-                            </div>
-                             <div className="bg-muted p-4 rounded-lg text-center">
-                                <p className="text-sm font-medium text-muted-foreground">Protein</p>
-                                <p className="text-3xl font-bold">{dailyTotals.proteinGrams.toFixed(1)}g</p>
-                            </div>
-                             <div className="bg-muted p-4 rounded-lg text-center">
-                                <p className="text-sm font-medium text-muted-foreground">Carbs</p>
-                                <p className="text-3xl font-bold">{dailyTotals.carbsGrams.toFixed(1)}g</p>
-                            </div>
-                             <div className="bg-muted p-4 rounded-lg text-center">
-                                <p className="text-sm font-medium text-muted-foreground">Fat</p>
-                                <p className="text-3xl font-bold">{dailyTotals.fatGrams.toFixed(1)}g</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-              )}
-
-              {filteredLogs.length === 0 ? (
+              {allLogs.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center p-12 text-center">
                     <Salad className="h-16 w-16 text-muted-foreground mb-4"/>
-                    <h3 className="text-xl font-semibold">No Meals Logged on {format(selectedDate, 'PPP')}</h3>
+                    <h3 className="text-xl font-semibold">No Meals Logged Yet</h3>
                     <p className="text-muted-foreground max-w-md">Use the AI Assistant to analyze a meal and save it to your diary.</p>
                 </Card>
               ) : (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold font-headline text-center">Logged Meals for {format(selectedDate, "PPP")}</h2>
-                  {filteredLogs.map(log => (
+                  {allLogs.map(log => (
                     <Card key={log.id}>
                         <CardHeader>
-                            <CardTitle>{log.timestamp ? format(log.timestamp.toDate(), 'p') : 'Just now'}</CardTitle>
+                            <CardTitle>{log.timestamp ? format(log.timestamp.toDate(), 'PPP, p') : 'Just now'}</CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                             {log.photoUrl && (
