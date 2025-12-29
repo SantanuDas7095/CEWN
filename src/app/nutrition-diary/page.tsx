@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -36,29 +36,24 @@ export default function NutritionDiaryPage() {
       setLoading(true);
       setError(null);
       const logsCollection = collection(db, 'nutritionLogs');
-      // Fetch all logs, will filter on client
-      const q = query(logsCollection);
+      
+      const today = new Date();
+      const startOfToday = startOfDay(today);
+      const endOfToday = endOfDay(today);
+
+      // Query for logs for the current user and for today
+      const q = query(
+        logsCollection,
+        where("userId", "==", user.uid),
+        where("timestamp", ">=", startOfToday),
+        where("timestamp", "<=", endOfToday),
+        orderBy("timestamp", "desc")
+      );
 
       try {
         const querySnapshot = await getDocs(q);
-        const allLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
-        
-        // Filter for current user on the client
-        const userLogs = allLogs.filter(log => log.userId === user.uid);
-
-        // Sort and filter for today on the client side
-        const sortedLogs = userLogs.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-
-        const today = new Date();
-        const startOfToday = startOfDay(today);
-        const endOfToday = endOfDay(today);
-
-        const todaysLogs = sortedLogs.filter(log => {
-            const logDate = log.timestamp.toDate();
-            return logDate >= startOfToday && logDate <= endOfToday;
-        });
-
-        setLogs(todaysLogs);
+        const userLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
+        setLogs(userLogs);
       } catch (error) {
         const permissionError = new FirestorePermissionError({
           path: logsCollection.path,
