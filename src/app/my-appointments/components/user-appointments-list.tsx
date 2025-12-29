@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, where, Timestamp } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import type { Appointment } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,10 +29,11 @@ export default function UserAppointmentsList() {
     if (!db || !user) return;
 
     const appointmentsCol = collection(db, "appointments");
+    // Removed orderBy to fix permission issue related to missing composite index.
+    // The query is now a simple query that the security rules can handle.
     const q = query(
       appointmentsCol, 
-      where("studentId", "==", user.uid),
-      orderBy("appointmentDate", "desc")
+      where("studentId", "==", user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -40,6 +41,8 @@ export default function UserAppointmentsList() {
       querySnapshot.forEach((doc) => {
         appointmentsData.push({ id: doc.id, ...doc.data() } as Appointment);
       });
+      // Sort on the client-side after fetching
+      appointmentsData.sort((a, b) => b.appointmentDate.toMillis() - a.appointmentDate.toMillis());
       setAppointments(appointmentsData);
       setLoading(false);
     }, (error) => {

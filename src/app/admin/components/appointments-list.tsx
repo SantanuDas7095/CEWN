@@ -27,7 +27,7 @@ export default function AppointmentsList() {
   useEffect(() => {
     if (!db) return;
     const appointmentsCol = collection(db, "appointments");
-    const q = query(appointmentsCol, orderBy("appointmentDate", "asc"));
+    const q = query(appointmentsCol, orderBy("appointmentDate", "desc"));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const appointmentsData: Appointment[] = [];
