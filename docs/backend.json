@@ -10,9 +10,11 @@
         "studentName": { "type": "string", "description": "Name of the student." },
         "enrollmentNumber": { "type": "string", "description": "The student's enrollment number." },
         "year": { "type": "number", "description": "The student's current year of study." },
-        "location": { "type": "string", "description": "The location of the emergency." },
+        "location": { "type": "string", "description": "The location of the emergency (can be manually entered or fetched via GPS)." },
         "emergencyType": { "type": "string", "description": "The type of emergency (e.g., Medical, Safety)." },
-        "timestamp": { "type": "string", "format": "date-time", "description": "When the report was created." }
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the report was created." },
+        "latitude": { "type": "number", "description": "The latitude of the emergency location." },
+        "longitude": { "type": "number", "description": "The longitude of the emergency location." }
       },
       "required": ["studentId", "studentName", "enrollmentNumber", "year", "location", "emergencyType", "timestamp"]
     },

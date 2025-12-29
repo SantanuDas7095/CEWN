@@ -10,6 +10,8 @@ export type EmergencyReport = {
     location: string;
     emergencyType: string;
     timestamp: Timestamp;
+    latitude?: number;
+    longitude?: number;
 };
 
 export type HospitalFeedback = {

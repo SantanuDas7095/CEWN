@@ -1,9 +1,10 @@
+
 "use client";
 
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { HeartPulse, Shield, Flame, Home, Megaphone } from "lucide-react";
+import { HeartPulse, Shield, Flame, Home, Megaphone, LocateFixed, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +61,8 @@ export default function SosPage() {
   const [enrollmentNumber, setEnrollmentNumber] = useState("");
   const [year, setYear] = useState("");
   const [location, setLocation] = useState("");
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [coordinates, setCoordinates] = useState<{lat: number, lon: number} | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -69,6 +72,39 @@ export default function SosPage() {
       setStudentName(user.displayName || "");
     }
   }, [user, loading, router]);
+  
+  const handleFetchLocation = () => {
+    if (!navigator.geolocation) {
+        toast({
+            title: "Geolocation Not Supported",
+            description: "Your browser does not support geolocation.",
+            variant: "destructive"
+        });
+        return;
+    }
+    
+    setIsFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            setLocation(`Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`);
+            setCoordinates({ lat: latitude, lon: longitude });
+            setIsFetchingLocation(false);
+            toast({
+                title: "Location Fetched",
+                description: "Your current location has been set."
+            });
+        },
+        (error) => {
+            setIsFetchingLocation(false);
+            toast({
+                title: "Location Error",
+                description: `Could not fetch location: ${error.message}`,
+                variant: "destructive"
+            });
+        }
+    );
+  }
 
   const isFormValid = studentName.trim() !== "" && enrollmentNumber.trim() !== "" && year.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
 
@@ -86,6 +122,7 @@ export default function SosPage() {
         location: location,
         emergencyType: selectedEmergency,
         timestamp: serverTimestamp(),
+        ...(coordinates && { latitude: coordinates.lat, longitude: coordinates.lon }),
     };
 
     addDoc(collection(db, "emergencyReports"), reportData)
@@ -137,7 +174,7 @@ export default function SosPage() {
           <Card className="mt-8">
             <CardHeader>
               <CardTitle>Your Details</CardTitle>
-              <CardDescription>This information will be sent to the authorities.</CardDescription>
+              <CardDescription>This information will be sent to the authorities. Use the button to get your precise location.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
@@ -171,12 +208,17 @@ export default function SosPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="location">Your Current Location</Label>
-                  <Input 
-                    id="location" 
-                    placeholder="e.g., Hostel 5, Block B, Room 201" 
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
+                  <div className="flex gap-2">
+                    <Input 
+                        id="location" 
+                        placeholder="e.g., Hostel 5, Block B, Room 201" 
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                    />
+                    <Button variant="outline" size="icon" onClick={handleFetchLocation} disabled={isFetchingLocation}>
+                        {isFetchingLocation ? <Loader2 className="animate-spin" /> : <LocateFixed />}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>

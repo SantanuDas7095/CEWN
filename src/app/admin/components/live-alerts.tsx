@@ -18,6 +18,8 @@ import type { EmergencyReport } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { MapPin } from "lucide-react";
+import Link from "next/link";
 
 export default function LiveAlerts() {
   const [reports, setReports] = useState<EmergencyReport[]>([]);
@@ -99,7 +101,21 @@ export default function LiveAlerts() {
                 <div>{report.studentName}</div>
                 <div className="text-xs text-muted-foreground">{report.enrollmentNumber} (Year {report.year})</div>
               </TableCell>
-              <TableCell className="hidden md:table-cell">{report.location}</TableCell>
+              <TableCell className="hidden md:table-cell">
+                {report.latitude && report.longitude ? (
+                    <Link 
+                        href={`https://www.google.com/maps?q=${report.latitude},${report.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                        <MapPin className="h-4 w-4"/>
+                        View on Map
+                    </Link>
+                ) : (
+                    report.location
+                )}
+              </TableCell>
               <TableCell className="text-right text-muted-foreground">
                 {report.timestamp ? formatDistanceToNow(report.timestamp.toDate(), { addSuffix: true }) : 'Just now'}
               </TableCell>
