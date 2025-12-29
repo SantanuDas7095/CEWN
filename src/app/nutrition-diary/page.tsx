@@ -10,7 +10,7 @@ import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BookCopy, Loader, Salad, ServerCrash } from 'lucide-react';
 import type { DailyNutritionLog } from '@/lib/types';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Image from 'next/image';
@@ -37,23 +37,17 @@ export default function NutritionDiaryPage() {
       setError(null);
       const logsCollection = collection(db, 'nutritionLogs');
       
-      const today = new Date();
-      const startOfToday = startOfDay(today);
-      const endOfToday = endOfDay(today);
-
-      // Query for logs for the current user and for today
       const q = query(
         logsCollection,
         where("userId", "==", user.uid),
-        where("timestamp", ">=", startOfToday),
-        where("timestamp", "<=", endOfToday),
         orderBy("timestamp", "desc")
       );
 
       try {
         const querySnapshot = await getDocs(q);
         const userLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
-        setLogs(userLogs);
+        const todaysLogs = userLogs.filter(log => isToday(log.timestamp.toDate()));
+        setLogs(todaysLogs);
       } catch (error) {
         const permissionError = new FirestorePermissionError({
           path: logsCollection.path,
