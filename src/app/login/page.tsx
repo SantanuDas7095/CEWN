@@ -61,7 +61,7 @@ export default function LoginPage() {
       router.push('/');
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
-        console.log('Sign-in popup closed by user.');
+        // User closed the popup, do nothing.
         return;
       }
       console.error('Error signing in with Google: ', error);
