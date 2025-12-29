@@ -10,8 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { format, isSameDay } from "date-fns";
+import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import type { Appointment } from "@/lib/types";
@@ -27,11 +27,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, User, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Calendar } from "@/components/ui/calendar";
 
 
 export default function AppointmentsList() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -58,6 +60,13 @@ export default function AppointmentsList() {
 
     return () => unsubscribe();
   }, [db]);
+
+  const filteredAppointments = useMemo(() => {
+    if (!selectedDate) return [];
+    return appointments.filter(appt => 
+        appt.appointmentDate && isSameDay(appt.appointmentDate.toDate(), selectedDate)
+    );
+  }, [appointments, selectedDate]);
 
   const handleStatusChange = async (appointmentId: string, status: 'scheduled' | 'completed' | 'cancelled') => {
     if (!db) return;
@@ -105,84 +114,82 @@ export default function AppointmentsList() {
     return format(date, "PPP");
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => (
-           <Skeleton key={i} className="h-12 w-full" />
-        ))}
-      </div>
-    )
-  }
-
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date & Time</TableHead>
-            <TableHead>Student</TableHead>
-            <TableHead>Reason</TableHead>
-            <TableHead>Booked By</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {appointments.length === 0 && (
+    <div className="grid md:grid-cols-2 gap-8 items-start">
+        <div>
+            <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="rounded-md border"
+            />
+        </div>
+        <div className="rounded-md border">
+        <Table>
+            <TableHeader>
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
-                No upcoming appointments.
-              </TableCell>
+                <TableHead>Time</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          )}
-          {appointments.map((appt) => (
-            <TableRow key={appt.id}>
-              <TableCell>
-                <div className="font-medium">{formatDate(appt.appointmentDate)}</div>
-                <div className="text-xs text-muted-foreground">{appt.appointmentTime}</div>
-              </TableCell>
-              <TableCell className="font-medium">
-                <div>{appt.studentName}</div>
-                <div className="text-xs text-muted-foreground">{appt.enrollmentNumber}</div>
-              </TableCell>
-              <TableCell>{appt.reason}</TableCell>
-              <TableCell>
-                 <div className="flex items-center gap-2">
-                    {appt.bookedBy === 'admin' ? <Shield className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-muted-foreground" />}
-                    <span className="capitalize">{appt.bookedBy || 'student'}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant={getStatusBadge(appt.status)}>
-                  {appt.status}
-                </Badge>
-              </TableCell>
-               <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'scheduled')}>
-                      Mark as Scheduled
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
-                      Mark as Completed
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
-                      Mark as Cancelled
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+            {loading ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        <Skeleton className="h-12 w-full" />
+                    </TableCell>
+                </TableRow>
+            ) : filteredAppointments.length === 0 ? (
+                <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center">
+                    No appointments scheduled for this day.
+                </TableCell>
+                </TableRow>
+            ) : (
+            filteredAppointments.map((appt) => (
+                <TableRow key={appt.id}>
+                <TableCell>
+                    <div className="font-medium">{appt.appointmentTime}</div>
+                </TableCell>
+                <TableCell className="font-medium">
+                    <div>{appt.studentName}</div>
+                    <div className="text-xs text-muted-foreground">{appt.enrollmentNumber}</div>
+                </TableCell>
+                <TableCell className="text-xs max-w-[150px] truncate">{appt.reason}</TableCell>
+                <TableCell>
+                    <Badge variant={getStatusBadge(appt.status)}>
+                    {appt.status}
+                    </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'scheduled')}>
+                        Mark as Scheduled
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
+                        Mark as Completed
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
+                        Mark as Cancelled
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
+                </TableRow>
+            )))}
+            </TableBody>
+        </Table>
+        </div>
     </div>
   );
 }

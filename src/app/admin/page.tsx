@@ -99,8 +99,8 @@ export default function AdminPage() {
             <TabsContent value="appointments">
               <Card>
                   <CardHeader>
-                    <CardTitle>Upcoming Appointments</CardTitle>
-                    <CardDescription>A list of all scheduled appointments. You can change the status of an appointment here.</CardDescription>
+                    <CardTitle>Manage Appointments</CardTitle>
+                    <CardDescription>Select a date on the calendar to view and manage that day's appointments.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <AppointmentsList />
