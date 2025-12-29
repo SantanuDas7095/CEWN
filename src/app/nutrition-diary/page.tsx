@@ -49,20 +49,12 @@ export default function NutritionDiaryPage() {
       setError(null);
       
       const logsCollectionRef = collection(db, 'userProfile', user.uid, 'nutritionLogs');
-      const q = query(logsCollectionRef);
+      const q = query(logsCollectionRef, orderBy('timestamp', 'desc'));
 
       try {
         const querySnapshot = await getDocs(q);
         const userLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
-        
-        // Sort logs on the client-side
-        const sortedLogs = userLogs.sort((a, b) => {
-            const timeA = a.timestamp?.toDate().getTime() || 0;
-            const timeB = b.timestamp?.toDate().getTime() || 0;
-            return timeB - timeA;
-        });
-        
-        setAllLogs(sortedLogs);
+        setAllLogs(userLogs);
       } catch (error) {
         const permissionError = new FirestorePermissionError({
           path: logsCollectionRef.path,
