@@ -57,7 +57,7 @@ export default function NutritionDiaryPage() {
         setAllLogs(userLogs);
       } catch (error) {
         const permissionError = new FirestorePermissionError({
-          path: logsCollectionRef.path,
+          path: `userProfile/${user.uid}/nutritionLogs`,
           operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
