@@ -38,6 +38,7 @@ import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { useAdmin } from "@/hooks/use-admin";
 
 const feedbackSchema = z.object({
   caseType: z.enum(["normal", "emergency"], { required_error: "Please select a case type." }),
@@ -61,9 +62,10 @@ const timeSlots = [
 
 export default function HospitalPage() {
   const { toast } = useToast();
-  const [avgWaitTime, setAvgWaitTime] = useState(0);
+  const [avgWaitTime, setAvgWaitTime] = useState<number | null>(null);
   const db = useFirestore();
   const { user, loading } = useUser();
+  const { isAdmin } = useAdmin();
   const router = useRouter();
 
   useEffect(() => {
@@ -73,7 +75,10 @@ export default function HospitalPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!db) return;
+    if (!db || !isAdmin) {
+      setAvgWaitTime(null);
+      return;
+    }
     const feedbacksCol = collection(db, "hospitalFeedbacks");
     const q = query(feedbacksCol);
 
@@ -96,7 +101,7 @@ export default function HospitalPage() {
     });
 
     return () => unsubscribe();
-  }, [db]);
+  }, [db, isAdmin]);
 
   const feedbackForm = useFeedbackForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
@@ -221,16 +226,18 @@ export default function HospitalPage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{avgWaitTime} min</div>
-                <p className="text-xs text-muted-foreground">Based on recent patient feedback</p>
-              </CardContent>
-            </Card>
+            {isAdmin && avgWaitTime !== null && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{avgWaitTime} min</div>
+                  <p className="text-xs text-muted-foreground">Based on recent patient feedback</p>
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Doctor Availability</CardTitle>
