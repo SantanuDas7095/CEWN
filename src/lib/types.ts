@@ -73,4 +73,5 @@ export type DoctorStatus = {
     name: string;
     specialty: string;
     isAvailable: boolean;
+    emergencyStatus?: string;
 };

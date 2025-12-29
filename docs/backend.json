@@ -134,7 +134,8 @@
       "properties": {
         "name": { "type": "string", "description": "The name of the doctor." },
         "specialty": { "type": "string", "description": "The doctor's specialty." },
-        "isAvailable": { "type": "boolean", "description": "Whether the doctor is currently available." }
+        "isAvailable": { "type": "boolean", "description": "Whether the doctor is currently available." },
+        "emergencyStatus": { "type": "string", "description": "A text description of the current campus emergency status." }
       },
       "required": ["name", "specialty", "isAvailable"]
     }

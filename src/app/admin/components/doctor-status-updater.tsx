@@ -23,6 +23,7 @@ const doctorStatusSchema = z.object({
   name: z.string().min(2, "Doctor's name is required."),
   specialty: z.string().min(2, "Specialty is required."),
   isAvailable: z.boolean(),
+  emergencyStatus: z.string().optional(),
 });
 
 type DoctorStatusForm = z.infer<typeof doctorStatusSchema>;
@@ -38,6 +39,7 @@ export default function DoctorStatusUpdater() {
       name: "",
       specialty: "",
       isAvailable: true,
+      emergencyStatus: "",
     },
   });
 
@@ -57,6 +59,7 @@ export default function DoctorStatusUpdater() {
             name: "Dr. A. K. Singh",
             specialty: "General Physician",
             isAvailable: true,
+            emergencyStatus: "Priority Open",
           });
         }
         setLoading(false);
@@ -80,7 +83,7 @@ export default function DoctorStatusUpdater() {
         .then(() => {
             toast({
                 title: "Status Updated",
-                description: "Doctor's availability has been updated successfully.",
+                description: "Hospital status has been updated successfully.",
             });
         })
         .catch(error => {
@@ -92,7 +95,7 @@ export default function DoctorStatusUpdater() {
             errorEmitter.emit('permission-error', permissionError);
             toast({
                 title: "Update Failed",
-                description: "You do not have permission to change the doctor status.",
+                description: "You do not have permission to change the hospital status.",
                 variant: "destructive",
             });
         })
@@ -102,14 +105,14 @@ export default function DoctorStatusUpdater() {
   };
 
   if (loading) {
-    return <Skeleton className="h-64 w-full" />;
+    return <Skeleton className="h-72 w-full" />;
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Doctor Availability</CardTitle>
-        <CardDescription>Update the current on-duty doctor and their availability status.</CardDescription>
+        <CardTitle>Hospital Status</CardTitle>
+        <CardDescription>Update doctor availability and campus emergency status.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -148,10 +151,7 @@ export default function DoctorStatusUpdater() {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">Is Available?</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Toggle to set the doctor as available or unavailable.
-                    </p>
+                    <FormLabel className="text-base">Is Doctor Available?</FormLabel>
                   </div>
                   <FormControl>
                     <Switch
@@ -162,6 +162,19 @@ export default function DoctorStatusUpdater() {
                 </FormItem>
               )}
             />
+             <FormField
+                control={form.control}
+                name="emergencyStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Emergency Status Text</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Priority Open" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update Status

@@ -34,7 +34,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp, doc } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp, doc, getDocs } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -70,6 +70,7 @@ export default function HospitalPage() {
   const [statusLoading, setStatusLoading] = useState(true);
   const db = useFirestore();
   const { user, loading } = useUser();
+  const { isAdmin } = useAdmin();
   const router = useRouter();
 
   useEffect(() => {
@@ -83,24 +84,36 @@ export default function HospitalPage() {
     
     // Fetch average wait time
     const feedbacksCol = collection(db, "hospitalFeedbacks");
-    const feedbackQuery = query(feedbacksCol);
-    const unsubFeedback = onSnapshot(feedbackQuery, (querySnapshot) => {
-      if (querySnapshot.empty) {
-        setAvgWaitTime(0);
-        return;
-      }
-      let totalWaitTime = 0;
-      querySnapshot.forEach((doc) => {
-        totalWaitTime += doc.data().waitingTime;
-      });
-      setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
-    }, (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: feedbacksCol.path,
-            operation: 'list',
-        }, error);
-        errorEmitter.emit('permission-error', permissionError);
-    });
+    const getAvgWaitTime = async () => {
+        try {
+            const querySnapshot = await getDocs(query(feedbacksCol));
+            if (querySnapshot.empty) {
+                setAvgWaitTime(0);
+                return;
+            }
+            let totalWaitTime = 0;
+            querySnapshot.forEach((doc) => {
+                totalWaitTime += doc.data().waitingTime;
+            });
+            setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
+        } catch (error) {
+            // Non-admins won't have permission, so we can ignore this error for them.
+            if (isAdmin) {
+                const permissionError = new FirestorePermissionError({
+                    path: feedbacksCol.path,
+                    operation: 'list',
+                }, error);
+                errorEmitter.emit('permission-error', permissionError);
+            }
+            // For non-admins, we just won't show the wait time.
+            setAvgWaitTime(null);
+        }
+    }
+
+    if (user) {
+      getAvgWaitTime();
+    }
+
 
     // Fetch doctor status
     const hospitalDocRef = doc(db, "campusInfo", "hospital");
@@ -119,10 +132,9 @@ export default function HospitalPage() {
     });
 
     return () => {
-        unsubFeedback();
         unsubDoctor();
     };
-  }, [db]);
+  }, [db, user, isAdmin]);
 
   const feedbackForm = useFeedbackForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
@@ -247,20 +259,18 @@ export default function HospitalPage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {avgWaitTime === null ? (
-                    <Skeleton className="h-8 w-24" />
-                ) : (
-                    <div className="text-2xl font-bold">{avgWaitTime} min</div>
-                )}
-                <p className="text-xs text-muted-foreground">Based on recent patient feedback</p>
-              </CardContent>
-            </Card>
+             {isAdmin && avgWaitTime !== null && (
+               <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{avgWaitTime} min</div>
+                  <p className="text-xs text-muted-foreground">Based on recent patient feedback</p>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -293,8 +303,14 @@ export default function HospitalPage() {
                 <Stethoscope className="h-4 w-4 text-primary-foreground/80" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">Priority Open</div>
-                <p className="text-xs text-primary-foreground/80">Emergency cases are being prioritized.</p>
+                 {statusLoading ? (
+                     <Skeleton className="h-8 w-32 bg-primary/50" />
+                 ) : (
+                    <>
+                        <div className="text-2xl font-bold">{doctorStatus?.emergencyStatus || "Normal Operations"}</div>
+                        <p className="text-xs text-primary-foreground/80">Current campus-wide status.</p>
+                    </>
+                 )}
               </CardContent>
             </Card>
           </div>
