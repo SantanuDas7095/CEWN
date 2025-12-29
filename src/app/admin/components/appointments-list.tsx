@@ -12,17 +12,28 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import type { Appointment } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function AppointmentsList() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const db = useFirestore();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!db) return;
@@ -47,6 +58,34 @@ export default function AppointmentsList() {
 
     return () => unsubscribe();
   }, [db]);
+
+  const handleStatusChange = async (appointmentId: string, status: 'scheduled' | 'completed' | 'cancelled') => {
+    if (!db) return;
+    const appointmentRef = doc(db, 'appointments', appointmentId);
+    
+    const updateData = { status };
+    
+    updateDoc(appointmentRef, updateData)
+        .then(() => {
+            toast({
+                title: "Status Updated",
+                description: `Appointment status changed to ${status}.`
+            });
+        })
+        .catch(error => {
+            const permissionError = new FirestorePermissionError({
+                path: appointmentRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            }, error);
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                title: "Update Failed",
+                description: "You do not have permission to update appointments.",
+                variant: 'destructive'
+            });
+        });
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -83,14 +122,15 @@ export default function AppointmentsList() {
           <TableRow>
             <TableHead>Date & Time</TableHead>
             <TableHead>Student</TableHead>
-            <TableHead className="hidden md:table-cell">Reason</TableHead>
-            <TableHead className="text-right">Status</TableHead>
+            <TableHead>Reason</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {appointments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center">
+              <TableCell colSpan={5} className="h-24 text-center">
                 No upcoming appointments.
               </TableCell>
             </TableRow>
@@ -105,11 +145,32 @@ export default function AppointmentsList() {
                 <div>{appt.studentName}</div>
                 <div className="text-xs text-muted-foreground">{appt.enrollmentNumber}</div>
               </TableCell>
-              <TableCell className="hidden md:table-cell">{appt.reason}</TableCell>
-              <TableCell className="text-right">
+              <TableCell>{appt.reason}</TableCell>
+              <TableCell>
                 <Badge variant={getStatusBadge(appt.status)}>
                   {appt.status}
                 </Badge>
+              </TableCell>
+               <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'scheduled')}>
+                      Mark as Scheduled
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
+                      Mark as Completed
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
+                      Mark as Cancelled
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}

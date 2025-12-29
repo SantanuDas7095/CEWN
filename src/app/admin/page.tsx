@@ -100,7 +100,7 @@ export default function AdminPage() {
               <Card>
                   <CardHeader>
                     <CardTitle>Upcoming Appointments</CardTitle>
-                    <CardDescription>A list of all scheduled appointments.</CardDescription>
+                    <CardDescription>A list of all scheduled appointments. You can change the status of an appointment here.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <AppointmentsList />

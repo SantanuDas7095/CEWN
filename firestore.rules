@@ -46,6 +46,7 @@ service cloud.firestore {
        allow create: if request.auth != null;
        allow read: if isAdmin() || isOwner(resource.data.studentId);
        allow list: if isAdmin() || (request.auth != null && request.query.where.studentId == request.auth.uid);
+       allow update: if isAdmin();
     }
 
     match /campusInfo/hospital {
