@@ -147,7 +147,7 @@ export default function AppointmentsList() {
                 <TableHeader>
                 <TableRow>
                     <TableHead>Time</TableHead>
-                    <TableHead>Student</TableHead>
+                    <TableHead>Patient</TableHead>
                     <TableHead>Reason</TableHead>
                     <TableHead>Booked By</TableHead>
                     <TableHead>Status</TableHead>
