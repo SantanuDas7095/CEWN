@@ -28,20 +28,23 @@ const ProfileInfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: 
 export default function ProfileCard({ user, userProfile, onEdit }: ProfileCardProps) {
   if (!user) return null;
 
+  const displayName = userProfile?.displayName || user.displayName;
+  const photoURL = userProfile?.photoURL || user.photoURL;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col items-center">
         <Avatar className="h-32 w-32 border-4 border-primary">
-          <AvatarImage src={userProfile?.photoURL || user.photoURL || undefined} alt={user.displayName || 'User'} />
+          <AvatarImage src={photoURL || undefined} alt={displayName || 'User'} />
           <AvatarFallback className="text-4xl">
-            {user.displayName?.charAt(0) || user.email?.charAt(0).toUpperCase()}
+            {displayName?.charAt(0) || user.email?.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
       </div>
 
       <Card>
         <CardContent className="p-6 space-y-6">
-            <ProfileInfoRow icon={<UserIcon />} label="Name" value={user.displayName} />
+            <ProfileInfoRow icon={<UserIcon />} label="Name" value={displayName} />
             <ProfileInfoRow icon={<BookUser />} label="Enrollment No." value={userProfile?.enrollmentNumber} />
             <ProfileInfoRow icon={<School />} label="Hostel" value={userProfile?.hostel} />
             <ProfileInfoRow icon={<Building />} label="Department" value={userProfile?.department} />

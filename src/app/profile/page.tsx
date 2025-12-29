@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { updateProfile } from 'firebase/auth';
 import { useUser, useFirestore } from '@/firebase';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
@@ -117,6 +118,12 @@ export default function ProfilePage() {
         }
       }
 
+      // Update Firebase Auth profile
+      await updateProfile(user, {
+        displayName: data.displayName,
+        photoURL: photoURL || '',
+      });
+
       const userDocRef = doc(db, 'userProfile', user.uid);
       const userProfileData: Partial<UserProfile> = {
         uid: user.uid,
@@ -128,7 +135,7 @@ export default function ProfilePage() {
         department: data.department || '',
         updatedAt: serverTimestamp(),
       };
-
+      
       if (data.year && !isNaN(data.year)) {
         userProfileData.year = data.year;
       }
