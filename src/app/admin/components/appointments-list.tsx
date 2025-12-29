@@ -10,9 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format, isSameDay } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { useEffect, useState, useMemo } from "react";
-import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, where } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import type { Appointment } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,9 +38,20 @@ export default function AppointmentsList() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!db) return;
+    if (!db || !selectedDate) return;
+    
+    setLoading(true);
+
     const appointmentsCol = collection(db, "appointments");
-    const q = query(appointmentsCol, orderBy("appointmentDate", "asc"));
+    const start = startOfDay(selectedDate);
+    const end = endOfDay(selectedDate);
+
+    const q = query(
+        appointmentsCol, 
+        where("appointmentDate", ">=", Timestamp.fromDate(start)),
+        where("appointmentDate", "<=", Timestamp.fromDate(end)),
+        orderBy("appointmentDate", "asc")
+    );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const appointmentsData: Appointment[] = [];
@@ -59,14 +70,7 @@ export default function AppointmentsList() {
     });
 
     return () => unsubscribe();
-  }, [db]);
-
-  const filteredAppointments = useMemo(() => {
-    if (!selectedDate) return [];
-    return appointments.filter(appt => 
-        appt.appointmentDate && isSameDay(appt.appointmentDate.toDate(), selectedDate)
-    );
-  }, [appointments, selectedDate]);
+  }, [db, selectedDate]);
 
   const handleStatusChange = async (appointmentId: string, status: 'scheduled' | 'completed' | 'cancelled') => {
     if (!db) return;
@@ -108,11 +112,6 @@ export default function AppointmentsList() {
         return "outline";
     }
   };
-  
-  const formatDate = (timestamp: Timestamp | Date): string => {
-    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
-    return format(date, "PPP");
-  }
 
   return (
     <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -140,18 +139,18 @@ export default function AppointmentsList() {
                     <TableBody>
                     {loading ? (
                         <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
+                            <TableCell colSpan={6}>
                                 <Skeleton className="h-12 w-full" />
                             </TableCell>
                         </TableRow>
-                    ) : filteredAppointments.length === 0 ? (
+                    ) : appointments.length === 0 ? (
                         <TableRow>
                         <TableCell colSpan={6} className="h-24 text-center">
                             No appointments scheduled for this day.
                         </TableCell>
                         </TableRow>
                     ) : (
-                    filteredAppointments.map((appt) => (
+                    appointments.map((appt) => (
                         <TableRow key={appt.id}>
                         <TableCell>
                             <div className="font-medium">{appt.appointmentTime}</div>
