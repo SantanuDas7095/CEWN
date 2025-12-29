@@ -212,7 +212,7 @@ export default function HospitalPage() {
       appointmentTime: values.appointmentTime,
       reason: values.reason,
       status: 'scheduled',
-      bookedBy: 'student',
+      bookedBy: isAdmin ? 'admin' : 'student',
     };
 
     addDoc(collection(db, "appointments"), appointmentData)
