@@ -4,13 +4,14 @@
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, QueryConstraint } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDescription } from "@/components/ui/card";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { Utensils } from "lucide-react";
 
 type ChartData = {
   day: string;
@@ -26,11 +27,17 @@ export default function HomePageMessChart() {
   const [loading, setLoading] = useState(true);
   const [selectedMess, setSelectedMess] = useState<string>("All Messes");
   const db = useFirestore();
+  const { user, loading: userLoading } = useUser();
 
   const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 
   useEffect(() => {
-    if (!db) return;
+    if (!db || !user) {
+        if (!userLoading) {
+            setLoading(false);
+        }
+        return;
+    };
     
     let ratingsQuery: any;
     const ratingsCol = collection(db, "messFoodRatings");
@@ -89,14 +96,14 @@ export default function HomePageMessChart() {
     });
 
     return () => unsubscribe();
-  }, [db, selectedMess]);
+  }, [db, selectedMess, user, userLoading]);
 
   return (
     <div className="space-y-4">
         <div className="flex justify-between items-center">
             <CardDescription>Daily average ratings across different meals.</CardDescription>
             <div className="w-48">
-                 <Select onValueChange={setSelectedMess} defaultValue="All Messes">
+                 <Select onValueChange={setSelectedMess} defaultValue="All Messes" disabled={!user}>
                     <SelectTrigger>
                         <SelectValue placeholder="Select a mess" />
                     </SelectTrigger>
@@ -110,8 +117,13 @@ export default function HomePageMessChart() {
             </div>
         </div>
         <div className="h-[350px] w-full">
-            {loading ? (
+            {loading || userLoading ? (
                 <Skeleton className="h-[350px] w-full" />
+            ) : !user ? (
+                 <div className="h-[350px] w-full flex flex-col items-center justify-center text-muted-foreground gap-4">
+                    <Utensils className="h-12 w-12"/>
+                    <p className="font-semibold">Please log in to view mess hygiene trends.</p>
+                </div>
             ) : chartData.length === 0 ? (
                 <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">
                     No rating data available for the selected mess.
