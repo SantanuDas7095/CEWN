@@ -44,6 +44,7 @@ export type Appointment = {
     appointmentTime: string;
     reason: string;
     status: 'scheduled' | 'completed' | 'cancelled';
+    bookedBy?: 'student' | 'admin';
 };
 
 export type UserProfile = {

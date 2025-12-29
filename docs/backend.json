@@ -58,7 +58,8 @@
         "appointmentDate": { "type": "string", "format": "date-time" },
         "appointmentTime": { "type": "string" },
         "reason": { "type": "string" },
-        "status": { "type": "string", "enum": ["scheduled", "completed", "cancelled"], "default": "scheduled" }
+        "status": { "type": "string", "enum": ["scheduled", "completed", "cancelled"], "default": "scheduled" },
+        "bookedBy": { "type": "string", "enum": ["student", "admin"], "default": "student" }
       },
       "required": ["studentId", "studentName", "enrollmentNumber", "appointmentDate", "appointmentTime", "reason", "status"]
     },

@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, User, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -123,6 +123,7 @@ export default function AppointmentsList() {
             <TableHead>Date & Time</TableHead>
             <TableHead>Student</TableHead>
             <TableHead>Reason</TableHead>
+            <TableHead>Booked By</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -130,7 +131,7 @@ export default function AppointmentsList() {
         <TableBody>
           {appointments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={6} className="h-24 text-center">
                 No upcoming appointments.
               </TableCell>
             </TableRow>
@@ -146,6 +147,12 @@ export default function AppointmentsList() {
                 <div className="text-xs text-muted-foreground">{appt.enrollmentNumber}</div>
               </TableCell>
               <TableCell>{appt.reason}</TableCell>
+              <TableCell>
+                 <div className="flex items-center gap-2">
+                    {appt.bookedBy === 'admin' ? <Shield className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-muted-foreground" />}
+                    <span className="capitalize">{appt.bookedBy || 'student'}</span>
+                </div>
+              </TableCell>
               <TableCell>
                 <Badge variant={getStatusBadge(appt.status)}>
                   {appt.status}
