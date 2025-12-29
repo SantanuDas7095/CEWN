@@ -3,14 +3,15 @@
 import 'dotenv/config';
 import { v2 as cloudinary } from 'cloudinary';
 
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true,
-});
-
 export async function uploadPhoto(formData: FormData) {
+    // Configure cloudinary inside the action to ensure env variables are loaded.
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+        secure: true,
+    });
+
     const file = formData.get('photo') as File;
     if (!file) {
         return { error: 'No photo provided.' };
@@ -30,7 +31,8 @@ export async function uploadPhoto(formData: FormData) {
         if (result.secure_url) {
             return { success: true, url: result.secure_url };
         } else {
-            return { error: 'Cloudinary upload failed.' };
+            // This case might be rare if upload itself doesn't throw, but good to have.
+            return { error: 'Cloudinary upload succeeded but no secure URL was returned.' };
         }
     } catch (error: any) {
         console.error('Upload action error:', error);
