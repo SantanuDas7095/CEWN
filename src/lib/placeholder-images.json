@@ -40,7 +40,7 @@
     {
       "id": "ai-assistant",
       "description": "An image representing an AI assistant or chatbot.",
-      "imageUrl": "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
+      "imageUrl": "https://images.unsplash.com/photo-1677756119517-756a188d2d94?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxBS CUhlYWx0aCUyMEFzc2lzdGFudHxlbnwwfHx8fDE3NjcwNzMxODF8MA&ixlib=rb-4.0.3&q=80&w=1080",
       "imageHint": "AI assistant"
     }
   ]
