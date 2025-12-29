@@ -6,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useUser, useAuth, useStorage, useFirestore } from '@/firebase';
+import { useUser, useStorage, useFirestore } from '@/firebase';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Button } from '@/components/ui/button';
@@ -42,7 +41,6 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const { user, loading: userLoading } = useUser();
   const { userProfile, loading: profileLoading } = useUserProfile();
-  const auth = useAuth();
   const storage = useStorage();
   const db = useFirestore();
   const router = useRouter();
@@ -70,7 +68,7 @@ export default function ProfilePage() {
     }
     
     form.reset({
-        displayName: user.displayName || userProfile?.displayName || '',
+        displayName: userProfile?.displayName || user.displayName || '',
         enrollmentNumber: userProfile?.enrollmentNumber || '',
         hostel: userProfile?.hostel || '',
         department: userProfile?.department || '',
@@ -106,10 +104,10 @@ export default function ProfilePage() {
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!auth?.currentUser || !storage || !db) return;
+    if (!user || !storage || !db) return;
 
     setIsSubmitting(true);
-    let photoURL = user.photoURL;
+    let photoURL = userProfile?.photoURL || user.photoURL;
 
     try {
       if (data.photo && data.photo instanceof File) {
@@ -117,17 +115,13 @@ export default function ProfilePage() {
         const snapshot = await uploadBytes(photoRef, data.photo);
         photoURL = await getDownloadURL(snapshot.ref);
       }
-      
-      await updateProfile(auth.currentUser, {
-        displayName: data.displayName,
-        photoURL: photoURL,
-      });
 
-      const userProfileData: Omit<UserProfile, 'id' | 'email'> & { email: string, createdAt?: any } = {
+      const userDocRef = doc(db, 'userProfile', user.uid);
+      const userProfileData: Partial<UserProfile> = {
         uid: user.uid,
         email: user.email!,
         displayName: data.displayName,
-        photoURL: photoURL,
+        photoURL: photoURL || '',
         enrollmentNumber: data.enrollmentNumber || '',
         hostel: data.hostel || '',
         department: data.department || '',
@@ -135,45 +129,40 @@ export default function ProfilePage() {
         updatedAt: serverTimestamp(),
       };
       
-      const userDocRef = doc(db, 'userProfile', user.uid);
-      
       if (!userProfile) {
         userProfileData.createdAt = serverTimestamp();
       }
 
-      setDoc(userDocRef, userProfileData, { merge: true })
-        .then(async () => {
-          toast({
-            title: 'Profile Updated',
-            description: 'Your profile has been successfully updated.',
-          });
-          if (auth.currentUser) {
-            await auth.currentUser.reload();
-          }
-          router.refresh();
-          setIsEditing(false);
-        })
-        .catch(error => {
-             const permissionError = new FirestorePermissionError({
-                path: `userProfile/${user.uid}`,
-                operation: userProfile ? 'update' : 'create',
-                requestResourceData: userProfileData,
-            }, error);
-            errorEmitter.emit('permission-error', permissionError);
-            toast({
-              title: 'Update Failed',
-              description: 'Could not save your profile due to a permissions issue.',
-              variant: 'destructive',
-            });
-        });
+      await setDoc(userDocRef, userProfileData, { merge: true });
+
+      toast({
+        title: 'Profile Updated',
+        description: 'Your profile has been successfully updated.',
+      });
+      setIsEditing(false);
 
     } catch (error: any) {
       console.error('Error during profile update process:', error);
-      toast({
-        title: 'Update Failed',
-        description: error.message || 'An error occurred while updating your profile.',
-        variant: 'destructive',
-      });
+      
+      if (error.code && error.code.includes('permission-denied')) {
+         const permissionError = new FirestorePermissionError({
+            path: `userProfile/${user.uid}`,
+            operation: userProfile ? 'update' : 'create',
+            requestResourceData: data,
+        }, error);
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+          title: 'Permission Denied',
+          description: 'You do not have permission to save this profile.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+            title: 'Update Failed',
+            description: error.message || 'An error occurred while updating your profile.',
+            variant: 'destructive',
+        });
+      }
     } finally {
       setIsSubmitting(false);
       setPhotoPreview(null);
@@ -203,7 +192,7 @@ export default function ProfilePage() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                   <div className="flex items-center gap-6">
                     <Avatar className="h-24 w-24">
-                      <AvatarImage src={photoPreview || user.photoURL || undefined} alt={user.displayName || 'User'} />
+                      <AvatarImage src={photoPreview || userProfile?.photoURL || user.photoURL || undefined} alt={user.displayName || 'User'} />
                       <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div className="grid w-full max-w-sm items-center gap-1.5">
@@ -314,3 +303,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
