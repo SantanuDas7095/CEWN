@@ -14,19 +14,20 @@ import { FirestorePermissionError } from "@/firebase/errors";
 
 type ChartData = {
   day: string;
-  [key: string]: number | string; // Allows for dynamic mess names
+  [key: string]: number | string; 
 }
 
+const messes = ["Gargi hostel mess", "Southern mess", "Northern mess", "Veg mess", "Rnt mess", "Eastern mess"];
 const meals = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
 export default function HomePageMessChart() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [messes, setMesses] = useState<string[]>([]);
+  const [mealTypes, setMealTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMeal, setSelectedMeal] = useState<string>("All Meals");
+  const [selectedMess, setSelectedMess] = useState<string>("All Messes");
   const db = useFirestore();
 
-  const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--primary))"];
+  const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 
   useEffect(() => {
     if (!db) return;
@@ -34,43 +35,43 @@ export default function HomePageMessChart() {
     let ratingsQuery: any;
     const ratingsCol = collection(db, "messFoodRatings");
 
-    if (selectedMeal !== "All Meals") {
-        ratingsQuery = query(ratingsCol, where("mealType", "==", selectedMeal));
+    if (selectedMess !== "All Messes") {
+        ratingsQuery = query(ratingsCol, where("messName", "==", selectedMess));
     } else {
         ratingsQuery = query(ratingsCol);
     }
 
-
+    setLoading(true);
     const unsubscribe = onSnapshot(ratingsQuery, (querySnapshot) => {
-      const dailyAverages: { [day: string]: { [mess: string]: { total: number, count: number } } } = {};
-      const messSet = new Set<string>();
+      const dailyAverages: { [day: string]: { [meal: string]: { total: number, count: number } } } = {};
+      const mealTypeSet = new Set<string>();
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.messName && data.timestamp) {
-          const messName = data.messName;
-          messSet.add(messName);
+        if (data.mealType && data.timestamp) {
+          const mealType = data.mealType;
+          mealTypeSet.add(mealType);
           const day = format(data.timestamp.toDate(), 'yyyy-MM-dd');
 
           if (!dailyAverages[day]) {
             dailyAverages[day] = {};
           }
-          if (!dailyAverages[day][messName]) {
-            dailyAverages[day][messName] = { total: 0, count: 0 };
+          if (!dailyAverages[day][mealType]) {
+            dailyAverages[day][mealType] = { total: 0, count: 0 };
           }
-          dailyAverages[day][messName].total += data.foodQualityRating;
-          dailyAverages[day][messName].count += 1;
+          dailyAverages[day][mealType].total += data.foodQualityRating;
+          dailyAverages[day][mealType].count += 1;
         }
       });
       
-      const uniqueMesses = Array.from(messSet).sort();
-      setMesses(uniqueMesses);
+      const uniqueMeals = Array.from(mealTypeSet).sort((a,b) => meals.indexOf(a) - meals.indexOf(b));
+      setMealTypes(uniqueMeals);
 
       const formattedData = Object.keys(dailyAverages).map(day => {
         const dayEntry: ChartData = { day };
-        uniqueMesses.forEach(mess => {
-          if (dailyAverages[day][mess]) {
-            dayEntry[mess] = parseFloat((dailyAverages[day][mess].total / dailyAverages[day][mess].count).toFixed(1));
+        uniqueMeals.forEach(meal => {
+          if (dailyAverages[day][meal]) {
+            dayEntry[meal] = parseFloat((dailyAverages[day][meal].total / dailyAverages[day][meal].count).toFixed(1));
           }
         });
         return dayEntry;
@@ -88,21 +89,21 @@ export default function HomePageMessChart() {
     });
 
     return () => unsubscribe();
-  }, [db, selectedMeal]);
+  }, [db, selectedMess]);
 
   return (
     <div className="space-y-4">
         <div className="flex justify-between items-center">
-            <CardDescription>Daily average ratings across all messes.</CardDescription>
+            <CardDescription>Daily average ratings across different meals.</CardDescription>
             <div className="w-48">
-                 <Select onValueChange={setSelectedMeal} defaultValue="All Meals">
+                 <Select onValueChange={setSelectedMess} defaultValue="All Messes">
                     <SelectTrigger>
-                        <SelectValue placeholder="Select a meal" />
+                        <SelectValue placeholder="Select a mess" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="All Meals">All Meals</SelectItem>
-                        {meals.map(meal => (
-                            <SelectItem key={meal} value={meal}>{meal}</SelectItem>
+                        <SelectItem value="All Messes">All Messes</SelectItem>
+                        {messes.map(mess => (
+                            <SelectItem key={mess} value={mess}>{mess}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -113,7 +114,7 @@ export default function HomePageMessChart() {
                 <Skeleton className="h-[350px] w-full" />
             ) : chartData.length === 0 ? (
                 <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">
-                    No rating data available for the selected meal.
+                    No rating data available for the selected mess.
                 </div>
             ) : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -134,8 +135,8 @@ export default function HomePageMessChart() {
                         labelFormatter={(label) => format(new Date(label), 'PPP')}
                     />
                     <Legend wrapperStyle={{fontSize: "12px"}}/>
-                    {messes.map((mess, i) => (
-                        <Line key={mess} type="monotone" dataKey={mess} stroke={colors[i % colors.length]} strokeWidth={2} name={mess} />
+                    {mealTypes.map((meal, i) => (
+                        <Line key={meal} type="monotone" dataKey={meal} stroke={colors[i % colors.length]} strokeWidth={2} name={meal} />
                     ))}
                     </LineChart>
                 </ResponsiveContainer>
