@@ -64,8 +64,7 @@ export default function AdminPage() {
             </TabsList>
             
             <TabsContent value="dashboard" className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="lg:col-span-4">
+               <Card>
                   <CardHeader>
                     <CardTitle>Live Emergency Alerts</CardTitle>
                     <CardDescription>Real-time stream of campus emergencies.</CardDescription>
@@ -74,18 +73,17 @@ export default function AdminPage() {
                     <LiveAlerts />
                   </CardContent>
                 </Card>
-                <div className="lg:col-span-3 space-y-4">
-                    <Card>
-                    <CardHeader>
-                        <CardTitle>Hospital Response Time</CardTitle>
-                        <CardDescription>Average emergency response time this week (in minutes).</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponseTimeChart />
-                    </CardContent>
-                    </Card>
-                    <DoctorStatusUpdater />
-                </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                <CardHeader>
+                    <CardTitle>Hospital Response Time</CardTitle>
+                    <CardDescription>Average emergency response time this week (in minutes).</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ResponseTimeChart />
+                </CardContent>
+                </Card>
+                <DoctorStatusUpdater />
               </div>
               <Card>
                 <CardHeader>
