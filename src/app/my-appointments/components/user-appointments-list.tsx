@@ -42,7 +42,7 @@ export default function UserAppointmentsList() {
         appointmentsData.push({ id: doc.id, ...doc.data() } as Appointment);
       });
       // Sort on the client-side after fetching
-      appointmentsData.sort((a, b) => b.appointmentDate.toMillis() - a.appointmentDate.toMillis());
+      appointmentsData.sort((a, b) => a.appointmentDate.toMillis() - b.appointmentDate.toMillis());
       setAppointments(appointmentsData);
       setLoading(false);
     }, (error) => {
