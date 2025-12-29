@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,16 +37,20 @@ export default function NutritionDiaryPage() {
       setError(null);
       const logsCollection = collection(db, 'nutritionLogs');
       
+      // Simplified query to satisfy security rules
       const q = query(
         logsCollection,
-        where("userId", "==", user.uid),
-        orderBy("timestamp", "desc")
+        where("userId", "==", user.uid)
       );
 
       try {
         const querySnapshot = await getDocs(q);
         const userLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyNutritionLog));
-        const todaysLogs = userLogs.filter(log => isToday(log.timestamp.toDate()));
+        
+        // Sort and filter on the client side
+        const sortedLogs = userLogs.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+        const todaysLogs = sortedLogs.filter(log => isToday(log.timestamp.toDate()));
+        
         setLogs(todaysLogs);
       } catch (error) {
         const permissionError = new FirestorePermissionError({
