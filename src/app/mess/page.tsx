@@ -9,7 +9,7 @@ import { Soup, Star, AlertTriangle, Utensils, Camera, X } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
-import { addDoc, collection, serverTimestamp, onSnapshot, query, where, QueryConstraint, orderBy, limit } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -454,7 +454,3 @@ export default function MessPage() {
     </div>
   );
 }
-
-    
-
-    
