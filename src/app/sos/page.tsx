@@ -78,7 +78,7 @@ export default function SosPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (user) {
+    if (user && userProfile) {
       setStudentName(userProfile?.displayName || user.displayName || "");
       setEnrollmentNumber(userProfile?.enrollmentNumber || "");
       setYear(userProfile?.year);
@@ -139,7 +139,7 @@ export default function SosPage() {
         ...(coordinates && { latitude: coordinates.lat, longitude: coordinates.lon }),
     };
 
-    if (year) {
+    if (year && !isAdmin) {
       reportData.year = year;
     }
 
@@ -206,10 +206,10 @@ export default function SosPage() {
                   />
                 </div>
                  <div className="space-y-2">
-                  <Label htmlFor="enrollmentNumber">Enrollment Number / Employee ID</Label>
+                  <Label htmlFor="enrollmentNumber">{isAdmin ? "Employee ID" : "Enrollment Number"}</Label>
                   <Input 
                     id="enrollmentNumber" 
-                    placeholder="e.g., 20-UCD-034"
+                    placeholder={isAdmin ? "e.g., EMP12345" : "e.g., 20-UCD-034"}
                     value={enrollmentNumber}
                     onChange={(e) => setEnrollmentNumber(e.target.value)}
                   />
