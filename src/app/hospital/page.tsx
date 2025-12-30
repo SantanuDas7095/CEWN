@@ -309,9 +309,9 @@ export default function HospitalPage() {
                           name="enrollmentNumber"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Enrollment Number / Employee ID</FormLabel>
+                              <FormLabel>{isAdmin ? "Employee ID" : "Enrollment Number"}</FormLabel>
                               <FormControl>
-                                <Input placeholder="e.g. 20-UCD-034" {...field} />
+                                <Input placeholder={isAdmin ? "e.g. EMP12345" : "e.g. 20-UCD-034"} {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -406,5 +406,7 @@ export default function HospitalPage() {
     </div>
   );
 }
+
+    
 
     
