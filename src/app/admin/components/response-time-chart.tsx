@@ -23,8 +23,10 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This effect will only run when the component has already verified the user is an admin.
+    if (adminLoading) return; 
+
     if (!db || !isAdmin) {
+      setLoading(false);
       return;
     }
 
@@ -69,7 +71,7 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db, isAdmin]);
+  }, [db, isAdmin, adminLoading]);
 
   // --- Strict Guard Clauses ---
   // 1. Wait for the admin status to be determined.
