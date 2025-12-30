@@ -1,4 +1,3 @@
-
 "use client"
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
@@ -23,13 +22,13 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // Wait until the admin status is fully determined.
+    // This guard is critical. Do not proceed until the admin status is fully resolved.
     if (adminLoading) {
       setLoading(true);
       return;
     }
 
-    // If the user is not an admin, stop immediately and show the permission message.
+    // If the check is complete and the user is NOT an admin, stop here.
     if (!isAdmin) {
       setLoading(false);
       return;
@@ -37,11 +36,11 @@ export default function ResponseTimeChart() {
     
     // If user is an admin but db isn't ready, wait.
     if (!db) {
-        setLoading(true);
-        return;
+      setLoading(true);
+      return;
     }
 
-    // At this point, we are sure the user is an admin and db is available.
+    // At this point, we are certain the user is an admin and the db is available.
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
     const q = query(
@@ -73,6 +72,7 @@ export default function ResponseTimeChart() {
       setChartData(formattedData);
       setLoading(false);
     }, (error) => {
+        // This error should now only trigger for genuine permission issues for an admin, not for non-admins.
         const permissionError = new FirestorePermissionError({
             path: appointmentsCol.path,
             operation: 'list',
