@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, MessageSquarePlus } from "lucide-react";
+import { MoreHorizontal, MessageSquarePlus, MessageSquareText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog,
@@ -54,7 +54,7 @@ const feedbackSchema = z.object({
 
 type FeedbackFormValues = z.infer<typeof feedbackSchema>;
 
-function FeedbackDialog({ appointment, onFeedbackSubmit }: { appointment: Appointment, onFeedbackSubmit: (appointmentId: string, values: FeedbackFormValues) => void }) {
+function FeedbackDialog({ appointment, onFeedbackSubmit, children }: { appointment: Appointment, onFeedbackSubmit: (appointmentId: string, values: FeedbackFormValues) => void, children: React.ReactNode }) {
     const form = useForm<FeedbackFormValues>({
         resolver: zodResolver(feedbackSchema),
         defaultValues: {
@@ -74,10 +74,7 @@ function FeedbackDialog({ appointment, onFeedbackSubmit }: { appointment: Appoin
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <MessageSquarePlus className="mr-2 h-4 w-4" />
-                    Give Feedback
-                </Button>
+                {children}
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
@@ -156,6 +153,42 @@ function FeedbackDialog({ appointment, onFeedbackSubmit }: { appointment: Appoin
         </Dialog>
     )
 }
+
+function ViewFeedbackDialog({ appointment }: { appointment: Appointment }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <MessageSquareText className="mr-2 h-4 w-4" />
+                    View Feedback
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Your Post-Visit Feedback</DialogTitle>
+                    <DialogDescription>
+                       Feedback you submitted for the appointment on {formatDate(appointment.appointmentDate)} at {appointment.appointmentTime}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="flex items-baseline">
+                        <p className="font-semibold w-32">Waiting Time:</p>
+                        <p>{appointment.waitingTime} minutes</p>
+                    </div>
+                     <div className="flex items-baseline">
+                        <p className="font-semibold w-32">Doctor on Arrival:</p>
+                        <p className="capitalize">{appointment.doctorAvailability}</p>
+                    </div>
+                     <div className="flex flex-col">
+                        <p className="font-semibold">Feedback:</p>
+                        <p className="mt-1 p-3 bg-muted rounded-md text-sm">{appointment.postVisitFeedback}</p>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 const formatDate = (timestamp: Timestamp | Date): string => {
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
@@ -289,7 +322,15 @@ export default function UserAppointmentsList() {
                   </Button>
                 )}
                 {appt.status === 'completed' && !appt.postVisitFeedback && (
-                  <FeedbackDialog appointment={appt} onFeedbackSubmit={onFeedbackSubmit} />
+                   <FeedbackDialog appointment={appt} onFeedbackSubmit={onFeedbackSubmit}>
+                       <Button variant="outline" size="sm">
+                            <MessageSquarePlus className="mr-2 h-4 w-4" />
+                            Give Feedback
+                        </Button>
+                   </FeedbackDialog>
+                )}
+                {appt.status === 'completed' && appt.postVisitFeedback && (
+                    <ViewFeedbackDialog appointment={appt} />
                 )}
               </TableCell>
             </TableRow>

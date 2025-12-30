@@ -23,14 +23,57 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, User, Shield, Calendar as CalendarIcon } from "lucide-react";
+import { MoreHorizontal, User, Shield, Calendar as CalendarIcon, MessageSquareText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
+function ViewFeedbackDialog({ appointment }: { appointment: Appointment }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <div className="relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+                    <MessageSquareText className="mr-2 h-4 w-4" />
+                    <span>View Feedback</span>
+                </div>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Post-Visit Feedback</DialogTitle>
+                    <DialogDescription>
+                        Feedback for {appointment.studentName}'s appointment on {format(appointment.appointmentDate.toDate(), "PPP")} at {appointment.appointmentTime}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="flex items-baseline">
+                        <p className="font-semibold w-32">Waiting Time:</p>
+                        <p>{appointment.waitingTime} minutes</p>
+                    </div>
+                     <div className="flex items-baseline">
+                        <p className="font-semibold w-32">Doctor on Arrival:</p>
+                        <p className="capitalize">{appointment.doctorAvailability}</p>
+                    </div>
+                     <div className="flex flex-col">
+                        <p className="font-semibold">Feedback:</p>
+                        <p className="mt-1 p-3 bg-muted rounded-md text-sm">{appointment.postVisitFeedback}</p>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function AppointmentsList() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -200,14 +243,20 @@ export default function AppointmentsList() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'scheduled')}>
-                            Mark as Scheduled
+                                Mark as Scheduled
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
-                            Mark as Completed
+                                Mark as Completed
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
-                            Mark as Cancelled
+                                Mark as Cancelled
                             </DropdownMenuItem>
+                             {appt.postVisitFeedback && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <ViewFeedbackDialog appointment={appt}/>
+                                </>
+                            )}
                         </DropdownMenuContent>
                         </DropdownMenu>
                     </TableCell>
