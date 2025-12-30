@@ -108,7 +108,7 @@ export default function HospitalPage() {
             appointmentsCol,
             where("status", "==", "completed"),
             where("waitingTime", ">=", 0),
-            orderBy("waitingTime", "desc"),
+            orderBy("appointmentDate", "desc"),
             limit(10)
         );
         try {
@@ -411,4 +411,5 @@ export default function HospitalPage() {
     
 
     
+
 
