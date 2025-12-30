@@ -23,24 +23,16 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This is the strict guard. Do nothing until the admin check is complete.
-    if (adminLoading) {
-      return; 
+    // Only run the effect if we have the db and the user is a confirmed admin.
+    // The parent render logic already handles the loading/non-admin states.
+    if (!db || !isAdmin || adminLoading) {
+        // If for any reason this runs while not admin, ensure loading is false.
+        if (!adminLoading) {
+            setLoading(false);
+        }
+        return;
     }
 
-    // If the check is complete and the user is not an admin, stop here.
-    if (!isAdmin) {
-      setLoading(false);
-      return;
-    }
-    
-    // If the db is not ready, also stop. This is unlikely but safe.
-    if (!db) {
-      setLoading(false);
-      return;
-    }
-
-    // At this point, we are certain the user is an admin. Proceed to fetch data.
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
     const q = query(
@@ -84,6 +76,7 @@ export default function ResponseTimeChart() {
     return () => unsubscribe();
   }, [db, isAdmin, adminLoading]);
 
+  // Strict guard clauses at the top of the render function.
   if (loading || adminLoading) {
     return <Skeleton className="h-[300px] w-full" />
   }
