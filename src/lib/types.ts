@@ -61,6 +61,7 @@ export type UserProfile = {
     hostel?: string;
     department?: string;
     year?: number;
+    phoneNumber?: string;
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
 }

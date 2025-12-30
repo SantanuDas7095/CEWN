@@ -6,7 +6,7 @@ import type { UserProfile } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User as UserIcon, BookUser, School, Building, Calendar, Pen, Briefcase } from 'lucide-react';
+import { User as UserIcon, BookUser, School, Building, Calendar, Pen, Briefcase, Phone } from 'lucide-react';
 
 interface ProfileCardProps {
   user: User | null;
@@ -46,6 +46,7 @@ export default function ProfileCard({ user, userProfile, onEdit, isAdmin }: Prof
       <Card>
         <CardContent className="p-6 space-y-6">
             <ProfileInfoRow icon={<UserIcon />} label="Name" value={displayName} />
+            <ProfileInfoRow icon={<Phone />} label="Phone Number" value={userProfile?.phoneNumber || user.phoneNumber} />
             {isAdmin ? (
                 <>
                     <ProfileInfoRow icon={<Briefcase />} label="Employee ID" value={userProfile?.enrollmentNumber} />

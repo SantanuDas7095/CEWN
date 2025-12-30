@@ -7,8 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { updateProfile } from 'firebase/auth';
-import { useUser, useFirestore } from '@/firebase';
+import { updateProfile, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, User as UserIcon, Check, Briefcase } from 'lucide-react';
+import { Loader2, User as UserIcon, Check, Briefcase, Phone, MessageSquare } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -35,6 +35,8 @@ const profileSchema = z.object({
   department: z.string().optional(),
   year: z.coerce.number().optional(),
   photo: z.instanceof(File).optional(),
+  phoneNumber: z.string().optional(),
+  otp: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -44,10 +46,14 @@ export default function ProfilePage() {
   const { userProfile, loading: profileLoading } = useUserProfile();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const db = useFirestore();
+  const auth = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -57,6 +63,8 @@ export default function ProfilePage() {
       hostel: '',
       department: '',
       year: undefined,
+      phoneNumber: '',
+      otp: '',
     },
   });
 
@@ -75,6 +83,7 @@ export default function ProfilePage() {
         hostel: userProfile?.hostel || '',
         department: userProfile?.department || '',
         year: userProfile?.year || undefined,
+        phoneNumber: userProfile?.phoneNumber || user.phoneNumber || '',
     });
 
   }, [user, userProfile, loading, db, router, form]);
@@ -88,9 +97,68 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
+  if (!user || !auth) {
     return null;
   }
+  
+  const setupRecaptcha = () => {
+    if (!auth) return;
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        },
+        'expired-callback': () => {
+          // Response expired. Ask user to solve reCAPTCHA again.
+        }
+      });
+    }
+  }
+
+  const handleSendOtp = async () => {
+    const phoneNumber = form.getValues("phoneNumber");
+    if (!phoneNumber || !auth) {
+        toast({ title: "Phone number is required", variant: "destructive" });
+        return;
+    }
+    
+    setIsSendingOtp(true);
+    setupRecaptcha();
+    const appVerifier = (window as any).recaptchaVerifier;
+
+    try {
+        const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+        setConfirmationResult(result);
+        toast({ title: "OTP Sent", description: "An OTP has been sent to your mobile number." });
+    } catch (error: any) {
+        console.error("OTP Error:", error);
+        toast({ title: "Failed to send OTP", description: error.message, variant: "destructive" });
+    } finally {
+        setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const otp = form.getValues("otp");
+    if (!otp || !confirmationResult) {
+        toast({ title: "OTP is required", variant: "destructive" });
+        return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+        await confirmationResult.confirm(otp);
+        toast({ title: "Phone Number Verified!", description: "Your phone number has been successfully linked." });
+        setConfirmationResult(null);
+    } catch (error: any) {
+        console.error("OTP Verification Error:", error);
+        toast({ title: "OTP Verification Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setIsVerifyingOtp(false);
+    }
+  }
+
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,6 +204,7 @@ export default function ProfilePage() {
         photoURL: photoURL || '',
         enrollmentNumber: data.enrollmentNumber || '',
         department: data.department || '',
+        phoneNumber: data.phoneNumber || user.phoneNumber || '',
         updatedAt: serverTimestamp(),
       };
       
@@ -191,6 +260,7 @@ export default function ProfilePage() {
     <div className="flex min-h-screen flex-col bg-secondary">
       <Header />
       <main className="flex-1">
+        <div id="recaptcha-container"></div>
         <div className="container mx-auto max-w-2xl py-12 px-4 md:px-6">
           {!isEditing ? (
              <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} isAdmin={isAdmin} />
@@ -302,6 +372,47 @@ export default function ProfilePage() {
                       />
                     </>
                   )}
+                  
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <FormField
+                        control={form.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2"><Phone/> Phone Number</FormLabel>
+                            <FormControl>
+                                <div className="flex gap-2">
+                                    <Input type="tel" placeholder="+91 98765 43210" {...field} />
+                                    <Button type="button" onClick={handleSendOtp} disabled={isSendingOtp}>
+                                        {isSendingOtp ? <Loader2 className="animate-spin" /> : 'Send OTP'}
+                                    </Button>
+                                </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {confirmationResult && (
+                        <FormField
+                            control={form.control}
+                            name="otp"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2"><MessageSquare/> Verification Code</FormLabel>
+                                <FormControl>
+                                <div className="flex gap-2">
+                                    <Input placeholder="Enter 6-digit OTP" {...field} />
+                                    <Button type="button" onClick={handleVerifyOtp} disabled={isVerifyingOtp}>
+                                        {isVerifyingOtp ? <Loader2 className="animate-spin" /> : 'Verify'}
+                                    </Button>
+                                </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                      )}
+                  </div>
 
 
                   <div className="flex gap-4">

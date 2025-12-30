@@ -79,6 +79,7 @@
             "hostel": { "type": "string", "description": "The student's hostel name and room number." },
             "department": { "type": "string", "description": "The student's academic department." },
             "year": { "type": "number", "description": "The student's current year of study." },
+            "phoneNumber": { "type": "string", "description": "The user's verified phone number." },
             "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of profile creation." },
             "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last profile update." }
         },
@@ -147,7 +148,7 @@
     }
   },
   "auth": {
-    "providers": ["google.com", "password"]
+    "providers": ["google.com", "password", "phone"]
   },
   "firestore": {
     "/emergencyReports/{reportId}": {
