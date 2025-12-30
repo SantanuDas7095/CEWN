@@ -60,7 +60,7 @@ export default function ResponseTimeChart() {
         const permissionError = new FirestorePermissionError({
             path: appointmentsCol.path,
             operation: 'list',
-        }, error);
+        });
         errorEmitter.emit('permission-error', permissionError);
         setLoading(false);
     });
