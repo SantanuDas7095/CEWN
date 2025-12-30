@@ -23,10 +23,8 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
+    // Only run the effect if the user is a confirmed admin and db is available.
     if (!isAdmin || !db) {
-        if (!adminLoading) {
-            setLoading(false);
-        }
         return;
     }
 
@@ -70,10 +68,11 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db, isAdmin, adminLoading]);
+  }, [db, isAdmin]);
 
+  // Guard clauses at the top of the render function
   if (adminLoading) {
-    return <Skeleton className="h-[300px] w-full" />
+    return <Skeleton className="h-[300px] w-full" />;
   }
 
   if (!isAdmin) {
@@ -81,11 +80,11 @@ export default function ResponseTimeChart() {
         <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
             You do not have permission to view this chart.
         </div>
-    )
+    );
   }
   
   if (loading) {
-      return <Skeleton className="h-[300px] w-full" />
+      return <Skeleton className="h-[300px] w-full" />;
   }
 
   if (chartData.length === 0) {
