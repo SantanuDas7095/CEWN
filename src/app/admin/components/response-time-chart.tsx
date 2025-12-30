@@ -24,11 +24,16 @@ export default function ResponseTimeChart() {
 
   useEffect(() => {
     if (adminLoading) {
-        setLoading(true);
-        return;
+      setLoading(true);
+      return;
+    }
+
+    if (!isAdmin) {
+      setLoading(false);
+      return;
     }
     
-    if (!isAdmin || !db) {
+    if (!db) {
         setLoading(false);
         return;
     }
