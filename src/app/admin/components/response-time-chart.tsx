@@ -22,8 +22,7 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This effect will now only run AFTER the guards below have confirmed
-    // the user is an admin, preventing the race condition.
+    // Guard: Only run effect if the user is a confirmed admin and db is available.
     if (!isAdmin || !db) return;
 
     setLoading(true);
