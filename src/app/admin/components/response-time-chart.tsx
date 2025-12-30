@@ -68,7 +68,7 @@ export default function ResponseTimeChart() {
       setChartData(formattedData);
       setLoading(false);
     }, (error) => {
-        // This error should now only trigger for genuine permission issues for an admin.
+        // This error should now only trigger for genuine permission issues for an admin, not for non-admins.
         const permissionError = new FirestorePermissionError({
             path: appointmentsCol.path,
             operation: 'list',
