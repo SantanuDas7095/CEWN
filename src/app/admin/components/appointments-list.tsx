@@ -23,7 +23,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, User, Shield, Calendar as CalendarIcon, MessageSquareText } from "lucide-react";
@@ -40,14 +39,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-function ViewFeedbackDialog({ appointment }: { appointment: Appointment }) {
+function ViewFeedbackDialog({ appointment, children }: { appointment: Appointment, children: React.ReactNode }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <div className="relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-                    <MessageSquareText className="mr-2 h-4 w-4" />
-                    <span>View Feedback</span>
-                </div>
+                {children}
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
@@ -229,9 +225,18 @@ export default function AppointmentsList() {
                         )}
                     </TableCell>
                     <TableCell>
-                        <Badge variant={getStatusBadge(appt.status)}>
-                        {appt.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                            <Badge variant={getStatusBadge(appt.status)}>
+                                {appt.status}
+                            </Badge>
+                            {appt.status === 'completed' && appt.postVisitFeedback && (
+                               <ViewFeedbackDialog appointment={appt}>
+                                    <Button variant="ghost" size="sm" className="h-auto px-2 py-1 text-xs">
+                                        View Feedback
+                                    </Button>
+                               </ViewFeedbackDialog>
+                            )}
+                        </div>
                     </TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
@@ -251,12 +256,6 @@ export default function AppointmentsList() {
                             <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
                                 Mark as Cancelled
                             </DropdownMenuItem>
-                             {appt.postVisitFeedback && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <ViewFeedbackDialog appointment={appt}/>
-                                </>
-                            )}
                         </DropdownMenuContent>
                         </DropdownMenu>
                     </TableCell>
