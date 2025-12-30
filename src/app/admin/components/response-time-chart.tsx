@@ -23,7 +23,15 @@ export default function ResponseTimeChart() {
 
   useEffect(() => {
     // Guard: Only run effect if the user is a confirmed admin and db is available.
-    if (!isAdmin || !db) return;
+    if (!isAdmin || !db) {
+        // If not admin, we might still be in a loading state briefly.
+        // The render guards below will handle showing the correct UI.
+        // We set loading to false to prevent showing a skeleton indefinitely.
+        if (!adminLoading) {
+            setLoading(false);
+        }
+        return;
+    }
 
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
@@ -65,7 +73,7 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db, isAdmin]);
+  }, [db, isAdmin, adminLoading]);
 
   // --- Strict Guard Clauses ---
   // 1. Wait for the admin status to be determined.
@@ -73,7 +81,7 @@ export default function ResponseTimeChart() {
     return <Skeleton className="h-[300px] w-full" />
   }
 
-  // 2. If the user is not an admin, do not render the chart or run the effect.
+  // 2. If the user is not an admin, do not render the chart.
   if (!isAdmin) {
     return (
         <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
