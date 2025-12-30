@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useAdmin } from "@/hooks/use-admin";
 
 const emergencyTypes = [
   {
@@ -57,17 +58,18 @@ export default function SosPage() {
   const { toast } = useToast();
   const { user, loading: userLoading } = useUser();
   const { userProfile, loading: profileLoading } = useUserProfile();
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const db = useFirestore();
   const router = useRouter();
 
   const [studentName, setStudentName] = useState("");
   const [enrollmentNumber, setEnrollmentNumber] = useState("");
-  const [year, setYear] = useState("");
+  const [year, setYear] = useState<number | undefined>(undefined);
   const [location, setLocation] = useState("");
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [coordinates, setCoordinates] = useState<{lat: number, lon: number} | null>(null);
 
-  const loading = userLoading || profileLoading;
+  const loading = userLoading || profileLoading || adminLoading;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -79,7 +81,7 @@ export default function SosPage() {
     if (user) {
       setStudentName(userProfile?.displayName || user.displayName || "");
       setEnrollmentNumber(userProfile?.enrollmentNumber || "");
-      setYear(userProfile?.year?.toString() || "");
+      setYear(userProfile?.year);
       if (userProfile?.hostel) {
         setLocation(userProfile.hostel);
       }
@@ -119,7 +121,7 @@ export default function SosPage() {
     );
   }
 
-  const isFormValid = studentName.trim() !== "" && enrollmentNumber.trim() !== "" && year.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
+  const isFormValid = studentName.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
 
   const handleAlertConfirm = async () => {
     if (!selectedEmergency || !user || !db) {
@@ -127,16 +129,19 @@ export default function SosPage() {
         return;
     }
 
-    const reportData = {
+    const reportData: any = {
         studentId: user.uid,
         studentName: studentName,
         enrollmentNumber: enrollmentNumber,
-        year: parseInt(year),
         location: location,
         emergencyType: selectedEmergency,
         timestamp: serverTimestamp(),
         ...(coordinates && { latitude: coordinates.lat, longitude: coordinates.lon }),
     };
+
+    if (year) {
+      reportData.year = year;
+    }
 
     addDoc(collection(db, "emergencyReports"), reportData)
         .then(() => {
@@ -209,16 +214,18 @@ export default function SosPage() {
                     onChange={(e) => setEnrollmentNumber(e.target.value)}
                   />
                 </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="year">Year of Study</Label>
-                  <Input
-                    id="year"
-                    type="number"
-                    placeholder="e.g., 3"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                  />
-                </div>
+                {!isAdmin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="year">Year of Study</Label>
+                    <Input
+                      id="year"
+                      type="number"
+                      placeholder="e.g., 3"
+                      value={year || ''}
+                      onChange={(e) => setYear(parseInt(e.target.value) || undefined)}
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="location">Your Current Location</Label>
                   <div className="flex gap-2">
