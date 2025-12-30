@@ -26,6 +26,9 @@ export default function ResponseTimeChart() {
     // This effect should only run if the user is a confirmed admin.
     // The top-level render guards should prevent this from running for non-admins.
     if (!isAdmin || !db) {
+        if (!adminLoading) {
+            setLoading(false);
+        }
         return;
     }
 
@@ -69,7 +72,7 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db, isAdmin]);
+  }, [db, isAdmin, adminLoading]);
 
   // --- Strict Guard Clauses at the top of the render function ---
   // 1. Wait for the admin status to be determined.
