@@ -6,12 +6,13 @@ import type { UserProfile } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User as UserIcon, BookUser, School, Building, Calendar, Pen } from 'lucide-react';
+import { User as UserIcon, BookUser, School, Building, Calendar, Pen, Briefcase } from 'lucide-react';
 
 interface ProfileCardProps {
   user: User | null;
   userProfile: UserProfile | null;
   onEdit: () => void;
+  isAdmin: boolean;
 }
 
 const ProfileInfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value?: string | number | null }) => (
@@ -25,7 +26,7 @@ const ProfileInfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: 
 );
 
 
-export default function ProfileCard({ user, userProfile, onEdit }: ProfileCardProps) {
+export default function ProfileCard({ user, userProfile, onEdit, isAdmin }: ProfileCardProps) {
   if (!user) return null;
 
   const displayName = userProfile?.displayName || user.displayName;
@@ -45,10 +46,19 @@ export default function ProfileCard({ user, userProfile, onEdit }: ProfileCardPr
       <Card>
         <CardContent className="p-6 space-y-6">
             <ProfileInfoRow icon={<UserIcon />} label="Name" value={displayName} />
-            <ProfileInfoRow icon={<BookUser />} label="Enrollment No." value={userProfile?.enrollmentNumber} />
-            <ProfileInfoRow icon={<School />} label="Hostel" value={userProfile?.hostel} />
-            <ProfileInfoRow icon={<Building />} label="Department" value={userProfile?.department} />
-            <ProfileInfoRow icon={<Calendar />} label="Year" value={userProfile?.year ? `${userProfile.year}${getOrdinal(userProfile.year)} Year` : 'Not set'} />
+            {isAdmin ? (
+                <>
+                    <ProfileInfoRow icon={<Briefcase />} label="Employee ID" value={userProfile?.enrollmentNumber} />
+                    <ProfileInfoRow icon={<Building />} label="Department" value={userProfile?.department} />
+                </>
+            ) : (
+                <>
+                    <ProfileInfoRow icon={<BookUser />} label="Enrollment No." value={userProfile?.enrollmentNumber} />
+                    <ProfileInfoRow icon={<School />} label="Hostel" value={userProfile?.hostel} />
+                    <ProfileInfoRow icon={<Building />} label="Department" value={userProfile?.department} />
+                    <ProfileInfoRow icon={<Calendar />} label="Year" value={userProfile?.year ? `${userProfile.year}${getOrdinal(userProfile.year)} Year` : 'Not set'} />
+                </>
+            )}
         </CardContent>
       </Card>
       

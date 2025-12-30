@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, User as UserIcon, Check } from 'lucide-react';
+import { Loader2, User as UserIcon, Check, Briefcase } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ProfileCard from './components/profile-card';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { uploadPhoto } from '../actions';
+import { useAdmin } from '@/hooks/use-admin';
 
 const profileSchema = z.object({
   displayName: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -41,6 +42,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const { user, loading: userLoading } = useUser();
   const { userProfile, loading: profileLoading } = useUserProfile();
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const db = useFirestore();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,8 +60,10 @@ export default function ProfilePage() {
     },
   });
 
+  const loading = userLoading || profileLoading || adminLoading;
+
   useEffect(() => {
-    if (userLoading || profileLoading) return;
+    if (loading) return;
     if (!user || !db) {
         router.push('/login');
         return;
@@ -73,10 +77,10 @@ export default function ProfilePage() {
         year: userProfile?.year || undefined,
     });
 
-  }, [user, userProfile, userLoading, profileLoading, db, router, form]);
+  }, [user, userProfile, loading, db, router, form]);
 
 
-  if (userLoading || profileLoading) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -131,13 +135,15 @@ export default function ProfilePage() {
         displayName: data.displayName,
         photoURL: photoURL || '',
         enrollmentNumber: data.enrollmentNumber || '',
-        hostel: data.hostel || '',
         department: data.department || '',
         updatedAt: serverTimestamp(),
       };
       
-      if (data.year && !isNaN(data.year)) {
-        userProfileData.year = data.year;
+      if (!isAdmin) {
+        userProfileData.hostel = data.hostel || '';
+        if (data.year && !isNaN(data.year)) {
+          userProfileData.year = data.year;
+        }
       }
       
       if (!userProfile) {
@@ -187,7 +193,7 @@ export default function ProfilePage() {
       <main className="flex-1">
         <div className="container mx-auto max-w-2xl py-12 px-4 md:px-6">
           {!isEditing ? (
-             <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} />
+             <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} isAdmin={isAdmin} />
           ) : (
             <Card>
             <CardHeader>
@@ -227,15 +233,15 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
+                  
                   <FormField
                     control={form.control}
                     name="enrollmentNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Enrollment Number</FormLabel>
+                        <FormLabel>{isAdmin ? "Employee ID" : "Enrollment Number"}</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., 20-UCD-034" {...field} />
+                          <Input placeholder={isAdmin ? "e.g., EMP12345" : "e.g., 20-UCD-034"} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -243,29 +249,6 @@ export default function ProfilePage() {
                   />
 
                   <FormField
-                    control={form.control}
-                    name="hostel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hostel</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
-                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your hostel" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Gargi hostel">Gargi hostel</SelectItem>
-                            <SelectItem value="RNT hostel">RNT hostel</SelectItem>
-                            <SelectItem value="Aryabhatta hostel">Aryabhatta hostel</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                   <FormField
                     control={form.control}
                     name="department"
                     render={({ field }) => (
@@ -278,20 +261,48 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
+                  
+                  {!isAdmin && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="hostel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Hostel</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                               <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select your hostel" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Gargi hostel">Gargi hostel</SelectItem>
+                                <SelectItem value="RNT hostel">RNT hostel</SelectItem>
+                                <SelectItem value="Aryabhatta hostel">Aryabhatta hostel</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <FormField
-                    control={form.control}
-                    name="year"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Year of Study</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="e.g., 3" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      <FormField
+                        control={form.control}
+                        name="year"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Year of Study</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="e.g., 3" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+
 
                   <div className="flex gap-4">
                     <Button type="submit" disabled={isSubmitting}>
