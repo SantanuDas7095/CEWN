@@ -23,12 +23,9 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // Guard: Only run effect if the user is a confirmed admin and db is available.
+    // This effect should only run if the user is a confirmed admin.
+    // The top-level render guards should prevent this from running for non-admins.
     if (!isAdmin || !db) {
-        // If not admin, we set loading to false to prevent showing a skeleton indefinitely.
-        if (!adminLoading) {
-            setLoading(false);
-        }
         return;
     }
 
@@ -72,15 +69,15 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db, isAdmin, adminLoading]);
+  }, [db, isAdmin]);
 
-  // --- Strict Guard Clauses ---
+  // --- Strict Guard Clauses at the top of the render function ---
   // 1. Wait for the admin status to be determined.
   if (adminLoading) {
     return <Skeleton className="h-[300px] w-full" />
   }
 
-  // 2. If the user is not an admin, do not render the chart.
+  // 2. If the user is confirmed not to be an admin, do not render the chart.
   if (!isAdmin) {
     return (
         <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
@@ -94,7 +91,7 @@ export default function ResponseTimeChart() {
       return <Skeleton className="h-[300px] w-full" />
   }
 
-  // 4. If there's no data to display.
+  // 4. If there's no data to display for the admin.
   if (chartData.length === 0) {
     return (
       <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
