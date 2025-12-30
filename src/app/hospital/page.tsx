@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Header } from "@/components/common/header";
@@ -103,14 +102,17 @@ export default function HospitalPage() {
     
     // Fetch average wait time from recent completed appointments
     const getAvgWaitTime = async () => {
+        if (!user) return; // Ensure user is available before querying
         const appointmentsCol = collection(db, "appointments");
-        // Simplified query to avoid composite index requirement.
-        // We fetch the latest appointments and filter on the client.
+        
+        // This query is now compliant with security rules for non-admins
         const q = query(
             appointmentsCol,
+            where("studentId", "==", user.uid),
             orderBy("appointmentDate", "desc"),
-            limit(20) // Fetch a slightly larger batch to filter from
+            limit(20)
         );
+
         try {
             const querySnapshot = await getDocs(q);
             const completedWithFeedback = querySnapshot.docs
@@ -131,6 +133,10 @@ export default function HospitalPage() {
 
         } catch (error) {
             console.error("Could not fetch average wait time:", error);
+            // Do not emit permission error here, as it might be expected for users with no appointments
+            if (!(error as any).message.includes('permission-denied')) {
+               errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'appointments', operation: 'list' }, error));
+            }
             setAvgWaitTime(null);
         }
     }
