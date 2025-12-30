@@ -104,25 +104,30 @@ export default function HospitalPage() {
     // Fetch average wait time from recent completed appointments
     const getAvgWaitTime = async () => {
         const appointmentsCol = collection(db, "appointments");
+        // Simplified query to avoid composite index requirement.
+        // We fetch the latest appointments and filter on the client.
         const q = query(
             appointmentsCol,
-            where("status", "==", "completed"),
             orderBy("appointmentDate", "desc"),
-            limit(10)
+            limit(20) // Fetch a slightly larger batch to filter from
         );
         try {
             const querySnapshot = await getDocs(q);
-            const validFeedbacks = querySnapshot.docs
+            const completedWithFeedback = querySnapshot.docs
                 .map(doc => doc.data())
-                .filter(data => data.waitingTime !== undefined && data.waitingTime >= 0);
+                .filter(data => 
+                    data.status === "completed" && 
+                    data.waitingTime !== undefined && 
+                    data.waitingTime >= 0
+                );
 
-            if (validFeedbacks.length === 0) {
-                setAvgWaitTime(0);
+            if (completedWithFeedback.length === 0) {
+                setAvgWaitTime(0); 
                 return;
             }
             
-            const totalWaitTime = validFeedbacks.reduce((acc, data) => acc + data.waitingTime, 0);
-            setAvgWaitTime(Math.floor(totalWaitTime / validFeedbacks.length));
+            const totalWaitTime = completedWithFeedback.reduce((acc, data) => acc + data.waitingTime, 0);
+            setAvgWaitTime(Math.floor(totalWaitTime / completedWithFeedback.length));
 
         } catch (error) {
             console.error("Could not fetch average wait time:", error);
@@ -223,7 +228,7 @@ export default function HospitalPage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-             {avgWaitTime !== null && (
+             {avgWaitTime !== null ? (
                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
@@ -234,6 +239,17 @@ export default function HospitalPage() {
                   <p className="text-xs text-muted-foreground">Based on recent patient feedback</p>
                 </CardContent>
               </Card>
+            ) : (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-8 w-20" />
+                        <Skeleton className="h-4 w-32 mt-1" />
+                    </CardContent>
+                </Card>
             )}
 
             <Card>
@@ -407,3 +423,5 @@ export default function HospitalPage() {
     </div>
   );
 }
+
+    
