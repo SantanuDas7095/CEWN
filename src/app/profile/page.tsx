@@ -122,6 +122,10 @@ export default function ProfilePage() {
         toast({ title: "Phone number is required", variant: "destructive" });
         return;
     }
+    if (phoneNumber === (userProfile?.phoneNumber || user.phoneNumber)) {
+        toast({ title: "Phone number is already verified", variant: "default" });
+        return;
+    }
     
     setIsSendingOtp(true);
     setupRecaptcha();
@@ -437,3 +441,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
