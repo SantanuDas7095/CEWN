@@ -24,9 +24,7 @@ export default function ResponseTimeChart() {
   useEffect(() => {
     // Guard: Only run effect if the user is a confirmed admin and db is available.
     if (!isAdmin || !db) {
-        // If not admin, we might still be in a loading state briefly.
-        // The render guards below will handle showing the correct UI.
-        // We set loading to false to prevent showing a skeleton indefinitely.
+        // If not admin, we set loading to false to prevent showing a skeleton indefinitely.
         if (!adminLoading) {
             setLoading(false);
         }
@@ -67,7 +65,7 @@ export default function ResponseTimeChart() {
         const permissionError = new FirestorePermissionError({
             path: appointmentsCol.path,
             operation: 'list',
-        });
+        }, error);
         errorEmitter.emit('permission-error', permissionError);
         setLoading(false);
     });
