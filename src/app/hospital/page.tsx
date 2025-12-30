@@ -107,24 +107,24 @@ export default function HospitalPage() {
         const q = query(
             appointmentsCol,
             where("status", "==", "completed"),
-            where("waitingTime", ">=", 0),
             orderBy("appointmentDate", "desc"),
             limit(10)
         );
         try {
             const querySnapshot = await getDocs(q);
-            if (querySnapshot.empty) {
+            const validFeedbacks = querySnapshot.docs
+                .map(doc => doc.data())
+                .filter(data => data.waitingTime !== undefined && data.waitingTime >= 0);
+
+            if (validFeedbacks.length === 0) {
                 setAvgWaitTime(0);
                 return;
             }
-            let totalWaitTime = 0;
-            querySnapshot.forEach((doc) => {
-                totalWaitTime += doc.data().waitingTime;
-            });
-            setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
+            
+            const totalWaitTime = validFeedbacks.reduce((acc, data) => acc + data.waitingTime, 0);
+            setAvgWaitTime(Math.floor(totalWaitTime / validFeedbacks.length));
+
         } catch (error) {
-            // For this public query, any error is likely a permission issue or network problem.
-            // We can choose to log it or just not show the wait time.
             console.error("Could not fetch average wait time:", error);
             setAvgWaitTime(null);
         }
@@ -407,9 +407,3 @@ export default function HospitalPage() {
     </div>
   );
 }
-
-    
-
-    
-
-
