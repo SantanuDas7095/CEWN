@@ -84,7 +84,7 @@ export default function ResponseTimeChart() {
     return <Skeleton className="h-[300px] w-full" />
   }
 
-  if (!isAdmin && !loading) {
+  if (!isAdmin) {
     return (
         <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
             You do not have permission to view this chart.
