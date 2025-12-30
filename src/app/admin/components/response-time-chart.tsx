@@ -14,7 +14,8 @@ import { useAdmin } from "@/hooks/use-admin";
 type ChartData = {
   date: string;
   displayDate: string;
-  'Response Time': number;
+  'Student Booked'?: number;
+  'Admin Booked'?: number;
 }
 
 export default function ResponseTimeChart() {
@@ -41,25 +42,44 @@ export default function ResponseTimeChart() {
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const dailyAverage: { [key: string]: { total: number, count: number } } = {};
+      const dailyAverage: { [key: string]: { student: { total: number, count: number }, admin: { total: number, count: number } } } = {};
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         if (data.appointmentDate && data.waitingTime !== undefined) {
           const date = format(data.appointmentDate.toDate(), 'yyyy-MM-dd');
           if (!dailyAverage[date]) {
-            dailyAverage[date] = { total: 0, count: 0 };
+            dailyAverage[date] = { 
+              student: { total: 0, count: 0 },
+              admin: { total: 0, count: 0 }
+            };
           }
-          dailyAverage[date].total += data.waitingTime;
-          dailyAverage[date].count += 1;
+          
+          if (data.bookedBy === 'admin') {
+              dailyAverage[date].admin.total += data.waitingTime;
+              dailyAverage[date].admin.count += 1;
+          } else { // 'student' or undefined defaults to student
+              dailyAverage[date].student.total += data.waitingTime;
+              dailyAverage[date].student.count += 1;
+          }
         }
       });
 
-      const formattedData = Object.keys(dailyAverage).map(date => ({
-        date,
-        displayDate: format(new Date(date), 'MMM d'),
-        'Response Time': Math.round(dailyAverage[date].total / dailyAverage[date].count),
-      })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const formattedData = Object.keys(dailyAverage).map(date => {
+        const entry: ChartData = {
+          date,
+          displayDate: format(new Date(date), 'MMM d'),
+        }
+
+        if (dailyAverage[date].student.count > 0) {
+            entry['Student Booked'] = Math.round(dailyAverage[date].student.total / dailyAverage[date].student.count);
+        }
+        if (dailyAverage[date].admin.count > 0) {
+            entry['Admin Booked'] = Math.round(dailyAverage[date].admin.total / dailyAverage[date].admin.count);
+        }
+
+        return entry;
+      }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
       setChartData(formattedData);
       setLoading(false);
@@ -121,7 +141,8 @@ export default function ResponseTimeChart() {
              }}
           />
           <Legend wrapperStyle={{fontSize: "12px"}}/>
-          <Bar dataKey="Response Time" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="Student Booked" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="Admin Booked" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

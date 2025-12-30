@@ -77,7 +77,7 @@ export default function AdminPage() {
                 <Card>
                 <CardHeader>
                     <CardTitle>Hospital Response Time</CardTitle>
-                    <CardDescription>Average emergency response time this week (in minutes).</CardDescription>
+                    <CardDescription>Average waiting time for student vs admin-booked appointments.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ResponseTimeChart />
