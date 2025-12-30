@@ -59,7 +59,10 @@
         "appointmentTime": { "type": "string" },
         "reason": { "type": "string" },
         "status": { "type": "string", "enum": ["scheduled", "completed", "cancelled"], "default": "scheduled" },
-        "bookedBy": { "type": "string", "enum": ["student", "admin"], "default": "student" }
+        "bookedBy": { "type": "string", "enum": ["student", "admin"], "default": "student" },
+        "waitingTime": { "type": "number", "description": "The time spent waiting, in minutes." },
+        "doctorAvailability": { "type": "string", "enum": ["available", "unavailable"] },
+        "postVisitFeedback": { "type": "string", "description": "The detailed feedback." }
       },
       "required": ["studentId", "studentName", "enrollmentNumber", "appointmentDate", "appointmentTime", "reason", "status"]
     },

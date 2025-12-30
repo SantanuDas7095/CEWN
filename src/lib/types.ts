@@ -45,6 +45,10 @@ export type Appointment = {
     reason: string;
     status: 'scheduled' | 'completed' | 'cancelled';
     bookedBy?: 'student' | 'admin';
+    // Feedback fields
+    waitingTime?: number;
+    doctorAvailability?: 'available' | 'unavailable';
+    postVisitFeedback?: string;
 };
 
 export type UserProfile = {

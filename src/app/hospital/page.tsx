@@ -7,11 +7,10 @@ import { Footer } from "@/components/common/footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Clock, Stethoscope, Users, Calendar as CalendarIcon, BookMarked, BadgeCheck, BadgeAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useForm, useForm as useFeedbackForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -43,12 +42,6 @@ import { useAdmin } from "@/hooks/use-admin";
 import type { DoctorStatus } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const feedbackSchema = z.object({
-  caseType: z.enum(["normal", "emergency"], { required_error: "Please select a case type." }),
-  waitingTime: z.coerce.number().min(0, "Waiting time cannot be negative."),
-  doctorAvailability: z.enum(["available", "unavailable"], { required_error: "Please select doctor availability." }),
-  feedback: z.string().min(10, "Feedback must be at least 10 characters.").max(500),
-});
 
 const appointmentSchema = z.object({
   studentName: z.string().min(2, "Name is required."),
@@ -136,14 +129,6 @@ export default function HospitalPage() {
     };
   }, [db, user, isAdmin]);
 
-  const feedbackForm = useFeedbackForm<z.infer<typeof feedbackSchema>>({
-    resolver: zodResolver(feedbackSchema),
-    defaultValues: {
-      waitingTime: 0,
-      feedback: "",
-    },
-  });
-
   const appointmentForm = useForm<z.infer<typeof appointmentSchema>>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
@@ -160,43 +145,6 @@ export default function HospitalPage() {
       appointmentForm.setValue("studentName", user.displayName);
     }
   }, [user, appointmentForm]);
-
-  async function onFeedbackSubmit(values: z.infer<typeof feedbackSchema>) {
-    if (!user || !db) {
-      toast({ title: "Authentication Error", description: "You must be logged in to submit feedback.", variant: "destructive" });
-      return;
-    }
-    
-    const feedbackData = {
-      studentId: user.uid,
-      waitingTime: values.waitingTime,
-      doctorAvailability: values.doctorAvailability,
-      postVisitFeedback: values.feedback,
-      emergencyVsNormal: values.caseType,
-      timestamp: serverTimestamp(),
-    };
-
-    addDoc(collection(db, "hospitalFeedbacks"), feedbackData)
-    .then(() => {
-        toast({
-            title: "Feedback Submitted",
-            description: "Thank you for your feedback. It helps us improve our services.",
-        });
-        feedbackForm.reset();
-    }).catch(error => {
-        const permissionError = new FirestorePermissionError({
-            path: 'hospitalFeedbacks',
-            operation: 'create',
-            requestResourceData: feedbackData,
-        }, error);
-        errorEmitter.emit('permission-error', permissionError);
-        toast({
-            title: "Error",
-            description: "Failed to submit feedback. Please try again.",
-            variant: "destructive",
-        });
-    });
-  }
 
   async function onAppointmentSubmit(values: z.infer<typeof appointmentSchema>) {
     if (!user || !db) {
@@ -316,7 +264,7 @@ export default function HospitalPage() {
             </Card>
           </div>
 
-          <div className="mt-12 grid lg:grid-cols-2 gap-8">
+          <div className="mt-12">
             <Card>
               <CardHeader>
                 <CardTitle className="font-headline text-2xl flex items-center gap-2">
@@ -433,108 +381,6 @@ export default function HospitalPage() {
                         )}
                       />
                     <Button type="submit" className="w-full">Book Appointment</Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline text-2xl">Post-Visit Feedback</CardTitle>
-                <p className="text-muted-foreground">Your feedback is mandatory and crucial for accountability.</p>
-              </CardHeader>
-              <CardContent>
-                <Form {...feedbackForm}>
-                  <form onSubmit={feedbackForm.handleSubmit(onFeedbackSubmit)} className="space-y-8">
-                    <div className="grid md:grid-cols-2 gap-8">
-                      <FormField
-                        control={feedbackForm.control}
-                        name="caseType"
-                        render={({ field }) => (
-                          <FormItem className="space-y-3">
-                            <FormLabel>Case Type</FormLabel>
-                            <FormControl>
-                              <RadioGroup
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                                className="flex space-x-4"
-                              >
-                                <FormItem className="flex items-center space-x-3 space-y-0">
-                                  <FormControl>
-                                    <RadioGroupItem value="normal" />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">Normal</FormLabel>
-                                </FormItem>
-                                <FormItem className="flex items-center space-x-3 space-y-0">
-                                  <FormControl>
-                                    <RadioGroupItem value="emergency" />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">Emergency</FormLabel>
-                                </FormItem>
-                              </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={feedbackForm.control}
-                        name="doctorAvailability"
-                        render={({ field }) => (
-                          <FormItem className="space-y-3">
-                            <FormLabel>Doctor Availability on Arrival</FormLabel>
-                            <FormControl>
-                              <RadioGroup
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                                className="flex space-x-4"
-                              >
-                                <FormItem className="flex items-center space-x-3 space-y-0">
-                                  <FormControl>
-                                    <RadioGroupItem value="available" />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">Available</FormLabel>
-                                </FormItem>
-                                <FormItem className="flex items-center space-x-3 space-y-0">
-                                  <FormControl>
-                                    <RadioGroupItem value="unavailable" />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">Unavailable</FormLabel>
-                                </FormItem>
-                              </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                        control={feedbackForm.control}
-                        name="waitingTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Waiting Time (in minutes)</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="e.g., 30" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    <FormField
-                      control={feedbackForm.control}
-                      name="feedback"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Post-Visit Feedback</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Describe your experience..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit">Submit Feedback</Button>
                   </form>
                 </Form>
               </CardContent>
