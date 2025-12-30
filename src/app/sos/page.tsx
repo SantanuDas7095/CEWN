@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 const emergencyTypes = [
   {
@@ -54,7 +55,8 @@ const emergencyTypes = [
 export default function SosPage() {
   const [selectedEmergency, setSelectedEmergency] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user, loading } = useUser();
+  const { user, loading: userLoading } = useUser();
+  const { userProfile, loading: profileLoading } = useUserProfile();
   const db = useFirestore();
   const router = useRouter();
 
@@ -65,14 +67,24 @@ export default function SosPage() {
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [coordinates, setCoordinates] = useState<{lat: number, lon: number} | null>(null);
 
+  const loading = userLoading || profileLoading;
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
-    if (user) {
-      setStudentName(user.displayName || "");
-    }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user) {
+      setStudentName(userProfile?.displayName || user.displayName || "");
+      setEnrollmentNumber(userProfile?.enrollmentNumber || "");
+      setYear(userProfile?.year?.toString() || "");
+      if (userProfile?.hostel) {
+        setLocation(userProfile.hostel);
+      }
+    }
+  }, [user, userProfile]);
   
   const handleFetchLocation = () => {
     if (!navigator.geolocation) {
