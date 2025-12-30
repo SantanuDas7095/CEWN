@@ -23,7 +23,7 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    if (!db || !isAdmin) {
+    if (adminLoading || !isAdmin || !db) {
       if (!adminLoading) {
         setLoading(false);
       }
@@ -74,6 +74,14 @@ export default function ResponseTimeChart() {
 
   if (loading) {
     return <Skeleton className="h-[300px] w-full" />
+  }
+
+  if (!isAdmin && !loading) {
+    return (
+        <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+            You do not have permission to view this chart.
+        </div>
+    )
   }
 
   if (chartData.length === 0) {
