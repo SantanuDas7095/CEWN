@@ -25,10 +25,10 @@ export default function ResponseTimeChart() {
   useEffect(() => {
     // Only run the effect if the user is a confirmed admin and db is available.
     if (!isAdmin || !db) {
-        if (!adminLoading) {
-            setLoading(false);
-        }
-        return;
+      if (!adminLoading) {
+        setLoading(false);
+      }
+      return;
     }
 
     setLoading(true);
