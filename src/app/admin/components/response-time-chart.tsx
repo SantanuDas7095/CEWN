@@ -23,8 +23,7 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This effect is now guarded by the component's render logic,
-    // so it will only run when isAdmin is true.
+    // This effect will only run when the component has already verified the user is an admin.
     if (!db || !isAdmin) {
       return;
     }
