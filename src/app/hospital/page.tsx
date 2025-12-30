@@ -33,7 +33,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useEffect, useState, useMemo } from "react";
-import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp, doc, getDocs } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp, doc, getDocs, where, limit, orderBy } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -101,11 +101,18 @@ export default function HospitalPage() {
   useEffect(() => {
     if (!db) return;
     
-    // Fetch average wait time
-    const feedbacksCol = collection(db, "hospitalFeedbacks");
+    // Fetch average wait time from recent completed appointments
     const getAvgWaitTime = async () => {
+        const appointmentsCol = collection(db, "appointments");
+        const q = query(
+            appointmentsCol,
+            where("status", "==", "completed"),
+            where("waitingTime", ">=", 0),
+            orderBy("waitingTime", "desc"),
+            limit(10)
+        );
         try {
-            const querySnapshot = await getDocs(query(feedbacksCol));
+            const querySnapshot = await getDocs(q);
             if (querySnapshot.empty) {
                 setAvgWaitTime(0);
                 return;
@@ -116,15 +123,9 @@ export default function HospitalPage() {
             });
             setAvgWaitTime(Math.floor(totalWaitTime / querySnapshot.size));
         } catch (error) {
-            // Non-admins won't have permission, so we can ignore this error for them.
-            if (isAdmin) {
-                const permissionError = new FirestorePermissionError({
-                    path: feedbacksCol.path,
-                    operation: 'list',
-                }, error);
-                errorEmitter.emit('permission-error', permissionError);
-            }
-            // For non-admins, we just won't show the wait time.
+            // For this public query, any error is likely a permission issue or network problem.
+            // We can choose to log it or just not show the wait time.
+            console.error("Could not fetch average wait time:", error);
             setAvgWaitTime(null);
         }
     }
@@ -132,7 +133,6 @@ export default function HospitalPage() {
     if (user) {
       getAvgWaitTime();
     }
-
 
     // Fetch doctor status
     const hospitalDocRef = doc(db, "campusInfo", "hospital");
@@ -223,7 +223,7 @@ export default function HospitalPage() {
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-             {isAdmin && avgWaitTime !== null && (
+             {avgWaitTime !== null && (
                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Avg. Waiting Time</CardTitle>
@@ -411,3 +411,4 @@ export default function HospitalPage() {
     
 
     
+
