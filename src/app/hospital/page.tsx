@@ -41,6 +41,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { useAdmin } from "@/hooks/use-admin";
 import type { DoctorStatus } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 
 const appointmentSchema = z.object({
@@ -62,9 +63,12 @@ export default function HospitalPage() {
   const [doctorStatus, setDoctorStatus] = useState<DoctorStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const db = useFirestore();
-  const { user, loading } = useUser();
+  const { user, loading: userLoading } = useUser();
+  const { userProfile, loading: profileLoading } = useUserProfile();
   const { isAdmin } = useAdmin();
   const router = useRouter();
+
+  const loading = userLoading || profileLoading;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -132,19 +136,23 @@ export default function HospitalPage() {
   const appointmentForm = useForm<z.infer<typeof appointmentSchema>>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
-      studentName: user?.displayName || "",
+      studentName: "",
       enrollmentNumber: "",
-      appointmentDate: new Date(),
-      appointmentTime: "",
       reason: "",
     }
   });
   
   useEffect(() => {
-    if (user?.displayName) {
-      appointmentForm.setValue("studentName", user.displayName);
+    if (user || userProfile) {
+        appointmentForm.reset({
+            studentName: userProfile?.displayName || user?.displayName || "",
+            enrollmentNumber: userProfile?.enrollmentNumber || "",
+            appointmentDate: appointmentForm.getValues("appointmentDate") || new Date(),
+            appointmentTime: appointmentForm.getValues("appointmentTime") || "",
+            reason: appointmentForm.getValues("reason") || "",
+        });
     }
-  }, [user, appointmentForm]);
+  }, [user, userProfile, appointmentForm]);
 
   async function onAppointmentSubmit(values: z.infer<typeof appointmentSchema>) {
     if (!user || !db) {
@@ -159,8 +167,8 @@ export default function HospitalPage() {
       appointmentDate: Timestamp.fromDate(values.appointmentDate),
       appointmentTime: values.appointmentTime,
       reason: values.reason,
-      status: 'scheduled',
-      bookedBy: isAdmin ? 'admin' : 'student',
+      status: 'scheduled' as const,
+      bookedBy: isAdmin ? 'admin' as const : 'student' as const,
     };
 
     addDoc(collection(db, "appointments"), appointmentData)
@@ -169,7 +177,13 @@ export default function HospitalPage() {
           title: "Appointment Booked",
           description: `Your appointment is scheduled for ${format(values.appointmentDate, "PPP")} at ${values.appointmentTime}.`,
         });
-        appointmentForm.reset();
+        appointmentForm.reset({
+            studentName: userProfile?.displayName || user?.displayName || "",
+            enrollmentNumber: userProfile?.enrollmentNumber || "",
+            reason: "",
+            appointmentTime: "",
+            appointmentDate: new Date(),
+        });
       })
       .catch((error) => {
          const permissionError = new FirestorePermissionError({
@@ -392,3 +406,5 @@ export default function HospitalPage() {
     </div>
   );
 }
+
+    
