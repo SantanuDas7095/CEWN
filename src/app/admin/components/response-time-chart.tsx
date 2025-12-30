@@ -23,12 +23,15 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    if (adminLoading || !isAdmin || !db) {
-      if (!adminLoading) {
+    if (adminLoading) {
+        setLoading(true);
+        return;
+    }
+    
+    if (!isAdmin || !db) {
         setLoading(false);
-      }
-      return;
-    };
+        return;
+    }
 
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
