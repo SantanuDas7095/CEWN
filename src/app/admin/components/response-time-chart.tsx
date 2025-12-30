@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { useAdmin } from "@/hooks/use-admin";
 
 type ChartData = {
   date: string;
@@ -19,14 +20,22 @@ export default function ResponseTimeChart() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const db = useFirestore();
+  const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    if (!db) return;
+    if (!db || !isAdmin) {
+      if (!adminLoading) {
+        setLoading(false);
+      }
+      return;
+    };
+
+    setLoading(true);
     const appointmentsCol = collection(db, "appointments");
     const q = query(
         appointmentsCol, 
         where("status", "==", "completed"),
-        where("waitingTime", "!=", null)
+        where("waitingTime", ">=", 0)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -61,7 +70,7 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db]);
+  }, [db, isAdmin, adminLoading]);
 
   if (loading) {
     return <Skeleton className="h-[300px] w-full" />
