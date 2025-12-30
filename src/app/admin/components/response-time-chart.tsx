@@ -13,6 +13,7 @@ import { useAdmin } from "@/hooks/use-admin";
 
 type ChartData = {
   date: string;
+  displayDate: string;
   'Response Time': number;
 }
 
@@ -45,7 +46,7 @@ export default function ResponseTimeChart() {
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         if (data.appointmentDate && data.waitingTime !== undefined) {
-          const date = format(data.appointmentDate.toDate(), 'MMM d');
+          const date = format(data.appointmentDate.toDate(), 'yyyy-MM-dd');
           if (!dailyAverage[date]) {
             dailyAverage[date] = { total: 0, count: 0 };
           }
@@ -56,6 +57,7 @@ export default function ResponseTimeChart() {
 
       const formattedData = Object.keys(dailyAverage).map(date => ({
         date,
+        displayDate: format(new Date(date), 'MMM d'),
         'Response Time': Math.round(dailyAverage[date].total / dailyAverage[date].count),
       })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
@@ -103,13 +105,20 @@ export default function ResponseTimeChart() {
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis dataKey="date" stroke="hsl(var(--foreground))" fontSize={12} />
+          <XAxis dataKey="displayDate" stroke="hsl(var(--foreground))" fontSize={12} />
           <YAxis stroke="hsl(var(--foreground))" fontSize={12} />
           <Tooltip
             contentStyle={{
               backgroundColor: "hsl(var(--card))",
               borderColor: "hsl(var(--border))",
             }}
+             labelFormatter={(label, payload) => {
+                 const data = payload[0]?.payload;
+                 if (data?.date) {
+                     return format(new Date(data.date), "PPP");
+                 }
+                 return label;
+             }}
           />
           <Legend wrapperStyle={{fontSize: "12px"}}/>
           <Bar dataKey="Response Time" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
