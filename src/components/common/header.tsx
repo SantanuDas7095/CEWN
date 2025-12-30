@@ -54,7 +54,7 @@ export function Header() {
           <University className="h-6 w-6 text-primary" />
           <span className="text-lg font-headline">NIT Agartala CEWN</span>
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+        <nav className="hidden items-center gap-6 text-sm font-medium md:flex lg:gap-8">
           {allNavLinks.map(({ href, label }) => (
             <Link
               key={label}
