@@ -3,7 +3,7 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,16 +22,20 @@ export default function ResponseTimeChart() {
 
   useEffect(() => {
     if (!db) return;
-    const feedbacksCol = collection(db, "hospitalFeedbacks");
-    const q = query(feedbacksCol);
+    const appointmentsCol = collection(db, "appointments");
+    const q = query(
+        appointmentsCol, 
+        where("status", "==", "completed"),
+        where("waitingTime", "!=", null)
+    );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const dailyAverage: { [key: string]: { total: number, count: number } } = {};
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.timestamp) {
-          const date = format(data.timestamp.toDate(), 'MMM d');
+        if (data.appointmentDate && data.waitingTime !== undefined) {
+          const date = format(data.appointmentDate.toDate(), 'MMM d');
           if (!dailyAverage[date]) {
             dailyAverage[date] = { total: 0, count: 0 };
           }
@@ -49,7 +53,7 @@ export default function ResponseTimeChart() {
       setLoading(false);
     }, (error) => {
         const permissionError = new FirestorePermissionError({
-            path: feedbacksCol.path,
+            path: appointmentsCol.path,
             operation: 'list',
         }, error);
         errorEmitter.emit('permission-error', permissionError);
