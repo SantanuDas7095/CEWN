@@ -226,16 +226,17 @@ export default function AppointmentsList() {
                     </TableCell>
                     <TableCell>
                         <div className="flex items-center gap-2">
-                            <Badge variant={getStatusBadge(appt.status)}>
-                                {appt.status}
-                            </Badge>
-                            {appt.status === 'completed' && appt.postVisitFeedback && (
+                           {appt.status === 'completed' && appt.postVisitFeedback ? (
                                <ViewFeedbackDialog appointment={appt}>
                                     <Button variant="ghost" size="sm" className="h-auto px-2 py-1 text-xs">
                                         View Feedback
                                     </Button>
                                </ViewFeedbackDialog>
-                            )}
+                           ) : (
+                            <Badge variant={getStatusBadge(appt.status)}>
+                                {appt.status}
+                            </Badge>
+                           )}
                         </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -250,9 +251,11 @@ export default function AppointmentsList() {
                             <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'scheduled')}>
                                 Mark as Scheduled
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
-                                Mark as Completed
-                            </DropdownMenuItem>
+                            {!appt.postVisitFeedback &&
+                              <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'completed')}>
+                                  Mark as Completed
+                              </DropdownMenuItem>
+                            }
                             <DropdownMenuItem onClick={() => handleStatusChange(appt.id!, 'cancelled')}>
                                 Mark as Cancelled
                             </DropdownMenuItem>
