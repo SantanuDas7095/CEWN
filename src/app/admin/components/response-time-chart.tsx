@@ -23,23 +23,25 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // Wait until the admin check is complete.
+    // This effect now strictly guards against running until the admin check is complete.
     if (adminLoading) {
       return; 
     }
 
-    // If the user is confirmed not to be an admin, do not proceed.
+    // If the check is complete and the user is not an admin, we set loading to false and stop.
+    // This prevents any attempt to fetch data.
     if (!isAdmin) {
       setLoading(false);
       return;
     }
     
-    // If the user is an admin but the database isn't ready, wait.
+    // If the database isn't ready, we also stop.
     if (!db) {
+      setLoading(false);
       return;
     }
 
-    // At this point, we are certain the user is an admin and the db is available.
+    // Only proceed if admin check is done, user is admin, and db is available.
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
     const q = query(
@@ -71,7 +73,7 @@ export default function ResponseTimeChart() {
       setChartData(formattedData);
       setLoading(false);
     }, (error) => {
-        // This error should now only trigger for genuine permission issues for an admin, not for non-admins.
+        // This error should now only trigger for genuine permission issues for an admin.
         const permissionError = new FirestorePermissionError({
             path: appointmentsCol.path,
             operation: 'list',
