@@ -25,10 +25,7 @@ export default function ResponseTimeChart() {
   useEffect(() => {
     // This effect should only run AFTER confirming the user is an admin.
     // The conditional rendering below ensures this.
-    if (!isAdmin || !db) {
-        setLoading(false);
-        return;
-    }
+    if (!isAdmin || !db) return;
 
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
