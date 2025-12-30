@@ -23,24 +23,24 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // Wait until the admin status is fully determined.
+    // This is the strict guard. Do nothing until the admin check is complete.
     if (adminLoading) {
       return; 
     }
 
-    // If the user is not an admin, stop here and show the permission message.
+    // If the check is complete and the user is not an admin, stop here.
     if (!isAdmin) {
       setLoading(false);
       return;
     }
     
-    // If the db is not ready, also stop.
+    // If the db is not ready, also stop. This is unlikely but safe.
     if (!db) {
       setLoading(false);
       return;
     }
 
-    // At this point, we are sure the user is an admin.
+    // At this point, we are certain the user is an admin. Proceed to fetch data.
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
     const q = query(
