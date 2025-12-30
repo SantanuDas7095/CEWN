@@ -23,11 +23,10 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // Only run if the user is a confirmed admin. The parent render logic handles other states.
+    // This effect should only run when we are certain the user is an admin.
+    // The guard clauses in the render function below prevent this component
+    // from reaching this effect if the user is not an admin.
     if (!db || !isAdmin) {
-      if(!adminLoading) {
-        setLoading(false);
-      }
       return;
     }
 
@@ -72,13 +71,15 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db, isAdmin, adminLoading]);
+  }, [db, isAdmin]);
 
-  // Strict guard clauses at the top of the render function.
+  // --- Strict Guard Clauses ---
+  // 1. Wait for the admin status to be determined.
   if (adminLoading) {
     return <Skeleton className="h-[300px] w-full" />
   }
 
+  // 2. If the user is not an admin, do not render the chart or run the effect.
   if (!isAdmin) {
     return (
         <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
@@ -87,10 +88,12 @@ export default function ResponseTimeChart() {
     )
   }
   
+  // 3. If the user is an admin but data is still loading (initial fetch).
   if (loading) {
       return <Skeleton className="h-[300px] w-full" />
   }
 
+  // 4. If there's no data to display.
   if (chartData.length === 0) {
     return (
       <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
@@ -99,6 +102,7 @@ export default function ResponseTimeChart() {
     )
   }
 
+  // 5. Render the chart for the admin.
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
