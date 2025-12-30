@@ -23,25 +23,20 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This effect now strictly guards against running until the admin check is complete.
     if (adminLoading) {
       return; 
     }
 
-    // If the check is complete and the user is not an admin, we set loading to false and stop.
-    // This prevents any attempt to fetch data.
     if (!isAdmin) {
       setLoading(false);
       return;
     }
     
-    // If the database isn't ready, we also stop.
     if (!db) {
       setLoading(false);
       return;
     }
 
-    // Only proceed if admin check is done, user is admin, and db is available.
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
     const q = query(
@@ -100,7 +95,7 @@ export default function ResponseTimeChart() {
   if (chartData.length === 0) {
     return (
       <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
-        No hospital feedback data available.
+        No completed appointments with feedback available.
       </div>
     )
   }
