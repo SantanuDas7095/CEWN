@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
@@ -22,8 +23,6 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This effect should only run if the user is a confirmed admin.
-    // The top-level render guards should prevent this from running for non-admins.
     if (!isAdmin || !db) {
         if (!adminLoading) {
             setLoading(false);
@@ -73,13 +72,10 @@ export default function ResponseTimeChart() {
     return () => unsubscribe();
   }, [db, isAdmin, adminLoading]);
 
-  // --- Strict Guard Clauses at the top of the render function ---
-  // 1. Wait for the admin status to be determined.
   if (adminLoading) {
     return <Skeleton className="h-[300px] w-full" />
   }
 
-  // 2. If the user is confirmed not to be an admin, do not render the chart.
   if (!isAdmin) {
     return (
         <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
@@ -88,12 +84,10 @@ export default function ResponseTimeChart() {
     )
   }
   
-  // 3. If the user is an admin but data is still loading (initial fetch).
   if (loading) {
       return <Skeleton className="h-[300px] w-full" />
   }
 
-  // 4. If there's no data to display for the admin.
   if (chartData.length === 0) {
     return (
       <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
@@ -102,7 +96,6 @@ export default function ResponseTimeChart() {
     )
   }
 
-  // 5. Render the chart for the admin.
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
