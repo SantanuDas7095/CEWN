@@ -23,20 +23,24 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
+    // Wait until the admin status is fully determined.
     if (adminLoading) {
       return; 
     }
 
+    // If the user is not an admin, stop here and show the permission message.
     if (!isAdmin) {
       setLoading(false);
       return;
     }
     
+    // If the db is not ready, also stop.
     if (!db) {
       setLoading(false);
       return;
     }
 
+    // At this point, we are sure the user is an admin.
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
     const q = query(
@@ -68,7 +72,7 @@ export default function ResponseTimeChart() {
       setChartData(formattedData);
       setLoading(false);
     }, (error) => {
-        // This error should now only trigger for genuine permission issues for an admin, not for non-admins.
+        // This error should now only trigger for genuine permission issues for an admin, not from race conditions.
         const permissionError = new FirestorePermissionError({
             path: appointmentsCol.path,
             operation: 'list',
