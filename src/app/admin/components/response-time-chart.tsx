@@ -1,4 +1,3 @@
-
 "use client"
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
@@ -25,7 +24,7 @@ export default function ResponseTimeChart() {
   useEffect(() => {
     // This effect should only run AFTER the guards in the render logic below
     // have confirmed the user is an admin.
-    if (!isAdmin || !db) return;
+    if (adminLoading || !isAdmin || !db) return;
 
     setLoading(true);
     const appointmentsCol = collection(db, "appointments");
@@ -67,7 +66,7 @@ export default function ResponseTimeChart() {
     });
 
     return () => unsubscribe();
-  }, [db, isAdmin]);
+  }, [db, isAdmin, adminLoading]);
 
   // --- Strict Guard Clauses ---
   // 1. Wait for the admin status to be determined.
