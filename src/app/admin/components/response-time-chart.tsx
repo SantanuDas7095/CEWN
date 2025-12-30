@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
@@ -22,21 +23,19 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This guard is critical. Do not proceed until the admin status is fully resolved.
+    // Wait until the admin check is complete.
     if (adminLoading) {
-      setLoading(true);
-      return;
+      return; 
     }
 
-    // If the check is complete and the user is NOT an admin, stop here.
+    // If the user is confirmed not to be an admin, do not proceed.
     if (!isAdmin) {
       setLoading(false);
       return;
     }
     
-    // If user is an admin but db isn't ready, wait.
+    // If the user is an admin but the database isn't ready, wait.
     if (!db) {
-      setLoading(true);
       return;
     }
 
@@ -84,7 +83,7 @@ export default function ResponseTimeChart() {
     return () => unsubscribe();
   }, [db, isAdmin, adminLoading]);
 
-  if (loading) {
+  if (loading || adminLoading) {
     return <Skeleton className="h-[300px] w-full" />
   }
 
