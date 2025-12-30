@@ -108,15 +108,17 @@ export default function HospitalPage() {
         // This query is now compliant with security rules for non-admins
         const q = query(
             appointmentsCol,
-            where("studentId", "==", user.uid),
-            orderBy("appointmentDate", "desc"),
-            limit(20)
+            where("studentId", "==", user.uid)
         );
 
         try {
             const querySnapshot = await getDocs(q);
-            const completedWithFeedback = querySnapshot.docs
-                .map(doc => doc.data())
+            
+            const userAppointments = querySnapshot.docs.map(doc => doc.data());
+            userAppointments.sort((a,b) => b.appointmentDate.toMillis() - a.appointmentDate.toMillis());
+
+            const completedWithFeedback = userAppointments
+                .slice(0, 20)
                 .filter(data => 
                     data.status === "completed" && 
                     data.waitingTime !== undefined && 
@@ -429,5 +431,3 @@ export default function HospitalPage() {
     </div>
   );
 }
-
-    
