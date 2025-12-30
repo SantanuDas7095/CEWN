@@ -121,7 +121,12 @@ export default function SosPage() {
     );
   }
 
-  const isFormValid = studentName.trim() !== "" && location.trim() !== "" && selectedEmergency !== null;
+  const isFormValid = 
+    studentName.trim() !== "" && 
+    location.trim() !== "" && 
+    selectedEmergency !== null && 
+    enrollmentNumber.trim() !== "" && 
+    (isAdmin || (year !== undefined && year > 0));
 
   const handleAlertConfirm = async () => {
     if (!selectedEmergency || !user || !db) {
