@@ -23,8 +23,7 @@ export default function ResponseTimeChart() {
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    // This effect should only run AFTER confirming the user is an admin.
-    // The conditional rendering below ensures this.
+    // This effect should only run AFTER the guards in the render logic below have confirmed the user is an admin.
     if (!isAdmin || !db) return;
 
     setLoading(true);
@@ -58,7 +57,6 @@ export default function ResponseTimeChart() {
       setChartData(formattedData);
       setLoading(false);
     }, (error) => {
-        // This error should now only trigger for genuine permission issues for an admin, not from race conditions.
         const permissionError = new FirestorePermissionError({
             path: appointmentsCol.path,
             operation: 'list',
