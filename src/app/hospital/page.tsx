@@ -32,7 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { addDoc, collection, serverTimestamp, onSnapshot, query, Timestamp, doc, getDocs } from "firebase/firestore";
 import { useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
@@ -43,14 +43,6 @@ import type { DoctorStatus } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserProfile } from "@/hooks/use-user-profile";
 
-
-const appointmentSchema = z.object({
-  studentName: z.string().min(2, "Name is required."),
-  enrollmentNumber: z.string().min(5, "Enrollment Number / Employee ID is required."),
-  appointmentDate: z.date({ required_error: "Please select a date." }),
-  appointmentTime: z.string({ required_error: "Please select a time slot." }),
-  reason: z.string().min(10, "Please provide a brief reason for your visit.").max(200),
-});
 
 const timeSlots = [
   "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
@@ -69,6 +61,36 @@ export default function HospitalPage() {
   const router = useRouter();
 
   const loading = userLoading || profileLoading;
+
+  const appointmentSchema = useMemo(() => z.object({
+    studentName: z.string().min(2, "Name is required."),
+    enrollmentNumber: z.string().min(5, isAdmin ? "Employee ID is required." : "Enrollment Number is required."),
+    appointmentDate: z.date({ required_error: "Please select a date." }),
+    appointmentTime: z.string({ required_error: "Please select a time slot." }),
+    reason: z.string().min(10, "Please provide a brief reason for your visit.").max(200),
+  }), [isAdmin]);
+
+  const appointmentForm = useForm<z.infer<typeof appointmentSchema>>({
+    resolver: zodResolver(appointmentSchema),
+    defaultValues: {
+      studentName: "",
+      enrollmentNumber: "",
+      reason: "",
+    }
+  });
+  
+  useEffect(() => {
+    if (loading || !user) return;
+
+    appointmentForm.reset({
+        studentName: userProfile?.displayName || user?.displayName || "",
+        enrollmentNumber: userProfile?.enrollmentNumber || "",
+        appointmentDate: appointmentForm.getValues("appointmentDate") || undefined,
+        appointmentTime: appointmentForm.getValues("appointmentTime") || "",
+        reason: appointmentForm.getValues("reason") || "",
+    });
+  }, [user, userProfile, loading, appointmentForm]);
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -133,27 +155,6 @@ export default function HospitalPage() {
     };
   }, [db, user, isAdmin]);
 
-  const appointmentForm = useForm<z.infer<typeof appointmentSchema>>({
-    resolver: zodResolver(appointmentSchema),
-    defaultValues: {
-      studentName: "",
-      enrollmentNumber: "",
-      reason: "",
-    }
-  });
-  
-  useEffect(() => {
-    if (user || userProfile) {
-        appointmentForm.reset({
-            studentName: userProfile?.displayName || user?.displayName || "",
-            enrollmentNumber: userProfile?.enrollmentNumber || "",
-            appointmentDate: appointmentForm.getValues("appointmentDate") || new Date(),
-            appointmentTime: appointmentForm.getValues("appointmentTime") || "",
-            reason: appointmentForm.getValues("reason") || "",
-        });
-    }
-  }, [user, userProfile, appointmentForm]);
-
   async function onAppointmentSubmit(values: z.infer<typeof appointmentSchema>) {
     if (!user || !db) {
         toast({ title: "Authentication Error", description: "You must be logged in to book an appointment.", variant: "destructive" });
@@ -182,7 +183,7 @@ export default function HospitalPage() {
             enrollmentNumber: userProfile?.enrollmentNumber || "",
             reason: "",
             appointmentTime: "",
-            appointmentDate: new Date(),
+            appointmentDate: undefined,
         });
       })
       .catch((error) => {
