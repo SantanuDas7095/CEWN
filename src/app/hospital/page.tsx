@@ -46,7 +46,7 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 
 const appointmentSchema = z.object({
   studentName: z.string().min(2, "Name is required."),
-  enrollmentNumber: z.string().min(5, "Enrollment number is required."),
+  enrollmentNumber: z.string().min(5, "Enrollment Number / Employee ID is required."),
   appointmentDate: z.date({ required_error: "Please select a date." }),
   appointmentTime: z.string({ required_error: "Please select a time slot." }),
   reason: z.string().min(10, "Please provide a brief reason for your visit.").max(200),
