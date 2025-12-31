@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'NIT Agartala CEWN',
   description: 'One platform for Emergency, Health, and Food Safety',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/icon.png',
   },
 };
 
