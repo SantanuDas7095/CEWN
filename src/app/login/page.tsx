@@ -102,11 +102,9 @@ export default function LoginPage() {
        let description = 'An unexpected error occurred.';
        switch (error.code) {
          case 'auth/user-not-found':
-           description = 'User not found. Please check the email or sign up.';
-           break;
          case 'auth/wrong-password':
          case 'auth/invalid-credential':
-           description = 'Invalid credentials. Please check your password.';
+           description = 'Invalid credentials. Please check your email and password, or sign up.';
            break;
          default:
            description = error.message;
