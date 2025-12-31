@@ -15,12 +15,9 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  type ConfirmationResult
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { University, LogIn, UserPlus, Phone, Loader2 } from 'lucide-react';
+import { University, LogIn, UserPlus, Phone } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,7 +32,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
 
 const emailSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -45,17 +41,14 @@ const emailSchema = z.object({
 });
 
 const phoneSchema = z.object({
-    phoneNumber: z.string().length(10, 'Please enter a valid 10-digit phone number.'),
-    otp: z.string().optional(),
+    phoneNumber: z.string().min(10, 'Please enter a valid 10-digit phone number.'),
+    password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
 export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
@@ -69,64 +62,44 @@ export default function LoginPage() {
     resolver: zodResolver(phoneSchema),
     defaultValues: {
         phoneNumber: '',
-        otp: '',
+        password: '',
     }
   });
 
-  const setupRecaptcha = () => {
-    if (!auth) return;
-    if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        },
-        'expired-callback': () => {
-          // Response expired. Ask user to solve reCAPTCHA again.
-        }
-      });
-    }
-  }
-  
-  const handleSendOtp = async (values: z.infer<typeof phoneSchema>) => {
-    if (!auth) return;
-    
-    const fullPhoneNumber = `+91${values.phoneNumber}`;
-    
-    setIsSendingOtp(true);
-    setupRecaptcha();
-    const appVerifier = (window as any).recaptchaVerifier;
 
+  const handlePhoneSignIn = async (values: z.infer<typeof phoneSchema>) => {
+    if (!auth) return;
+    // Firebase doesn't support phone + password directly. We can simulate it
+    // by creating a fake email and using the email/password flow.
+    // This is a workaround and has security implications.
+    // A better solution would involve custom backend logic.
+    const fakeEmail = `+91${values.phoneNumber}@example.com`;
     try {
-        const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
-        setConfirmationResult(result);
-        toast({ title: "OTP Sent", description: `An OTP has been sent to ${fullPhoneNumber}.` });
-    } catch (error: any) {
-        console.error("OTP Error:", error);
-        toast({ title: "Failed to send OTP", description: error.message, variant: "destructive" });
-    } finally {
-        setIsSendingOtp(false);
-    }
-  };
-  
-  const handleVerifyOtp = async (values: z.infer<typeof phoneSchema>) => {
-    if (!values.otp || !confirmationResult) {
-      toast({ title: "OTP is required", variant: "destructive" });
-      return;
-    }
-
-    setIsVerifyingOtp(true);
-    try {
-      await confirmationResult.confirm(values.otp);
-      toast({ title: "Sign In Successful!", description: "You have been successfully signed in." });
+      // First, try to sign in
+      await signInWithEmailAndPassword(auth, fakeEmail, values.password);
       router.push('/');
     } catch (error: any) {
-      console.error("OTP Verification Error:", error);
-      toast({ title: "OTP Verification Failed", description: error.message || 'An unknown error occurred.', variant: "destructive" });
-    } finally {
-      setIsVerifyingOtp(false);
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        // If user not found, create a new account
+        try {
+          await createUserWithEmailAndPassword(auth, fakeEmail, values.password);
+          router.push('/');
+        } catch (signupError: any) {
+            toast({
+                title: 'Phone Sign-Up Failed',
+                description: signupError.message,
+                variant: 'destructive',
+            });
+        }
+      } else {
+        toast({
+          title: 'Phone Sign-In Failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     }
-  }
+  };
 
 
   const handleGoogleSignIn = async () => {
@@ -175,17 +148,30 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push('/');
     } catch (error: any) {
-      toast({
-        title: 'Sign-In Failed',
-        description: 'Invalid credentials. Please try again.',
-        variant: 'destructive',
-      });
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        // If user is not found, we can try to sign them up instead.
+        try {
+            await createUserWithEmailAndPassword(auth, values.email, values.password);
+            router.push('/');
+        } catch (signupError: any) {
+            toast({
+                title: 'Sign-Up Failed',
+                description: signupError.message,
+                variant: 'destructive',
+            });
+        }
+      } else {
+         toast({
+            title: 'Sign-In Failed',
+            description: 'Invalid credentials. Please try again.',
+            variant: 'destructive',
+        });
+      }
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary">
-      <div id="recaptcha-container"></div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <University className="mx-auto h-12 w-12 text-primary" />
@@ -295,11 +281,10 @@ export default function LoginPage() {
             </TabsContent>
             <TabsContent value="phone">
                <Form {...phoneForm}>
-                <form 
-                    onSubmit={confirmationResult ? phoneForm.handleSubmit(handleVerifyOtp) : phoneForm.handleSubmit(handleSendOtp)}
+                <form
+                    onSubmit={phoneForm.handleSubmit(handlePhoneSignIn)}
                     className="space-y-6 pt-6"
                 >
-                  {!confirmationResult ? (
                     <FormField
                       control={phoneForm.control}
                       name="phoneNumber"
@@ -322,38 +307,22 @@ export default function LoginPage() {
                         </FormItem>
                       )}
                     />
-                  ) : (
                     <FormField
                       control={phoneForm.control}
-                      name="otp"
+                      name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Verification Code</FormLabel>
+                          <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="Enter 6-digit OTP"
-                              {...field}
-                            />
+                            <Input type="password" placeholder="••••••••" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  )}
-                  <Button type="submit" className="w-full" disabled={isSendingOtp || isVerifyingOtp}>
-                    {isSendingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isVerifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {confirmationResult ? 'Verify OTP' : 'Send OTP'}
+                  <Button type="submit" className="w-full">
+                    Sign In with Phone
                   </Button>
-                   {confirmationResult && (
-                        <Button variant="link" className="w-full" onClick={() => {
-                            setConfirmationResult(null);
-                            phoneForm.reset();
-                        }}>
-                           Change phone number
-                        </Button>
-                    )}
                 </form>
               </Form>
             </TabsContent>
@@ -384,3 +353,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
