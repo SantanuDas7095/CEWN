@@ -15,9 +15,12 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  type ConfirmationResult
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { University, LogIn, UserPlus } from 'lucide-react';
+import { University, LogIn, UserPlus, Phone, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,26 +35,99 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
-const formSchema = z.object({
+const emailSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
+const phoneSchema = z.object({
+    phoneNumber: z.string().length(10, 'Please enter a valid 10-digit phone number.'),
+    otp: z.string().optional(),
+});
+
 export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const emailForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   });
+
+  const phoneForm = useForm<z.infer<typeof phoneSchema>>({
+    resolver: zodResolver(phoneSchema),
+    defaultValues: {
+        phoneNumber: '',
+        otp: '',
+    }
+  });
+
+  const setupRecaptcha = () => {
+    if (!auth) return;
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        },
+        'expired-callback': () => {
+          // Response expired. Ask user to solve reCAPTCHA again.
+        }
+      });
+    }
+  }
+  
+  const handleSendOtp = async (values: z.infer<typeof phoneSchema>) => {
+    if (!auth) return;
+    
+    const fullPhoneNumber = `+91${values.phoneNumber}`;
+    
+    setIsSendingOtp(true);
+    setupRecaptcha();
+    const appVerifier = (window as any).recaptchaVerifier;
+
+    try {
+        const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
+        setConfirmationResult(result);
+        toast({ title: "OTP Sent", description: `An OTP has been sent to ${fullPhoneNumber}.` });
+    } catch (error: any) {
+        console.error("OTP Error:", error);
+        toast({ title: "Failed to send OTP", description: error.message, variant: "destructive" });
+    } finally {
+        setIsSendingOtp(false);
+    }
+  };
+  
+  const handleVerifyOtp = async (values: z.infer<typeof phoneSchema>) => {
+    if (!values.otp || !confirmationResult) {
+      toast({ title: "OTP is required", variant: "destructive" });
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      await confirmationResult.confirm(values.otp);
+      toast({ title: "Sign In Successful!", description: "You have been successfully signed in." });
+      router.push('/');
+    } catch (error: any) {
+      console.error("OTP Verification Error:", error);
+      toast({ title: "OTP Verification Failed", description: error.message || 'An unknown error occurred.', variant: "destructive" });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  }
+
 
   const handleGoogleSignIn = async () => {
     if (!auth) return;
@@ -62,7 +138,7 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, provider);
       router.push('/');
-    } catch (error: any) {
+    } catch (error: any) => {
       if (error.code === 'auth/popup-closed-by-user') {
         // User closed the popup, do nothing.
         return;
@@ -76,7 +152,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleEmailSignUp = async (values: z.infer<typeof formSchema>) => {
+  const handleEmailSignUp = async (values: z.infer<typeof emailSchema>) => {
     if (!auth) return;
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -93,7 +169,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleEmailSignIn = async (values: z.infer<typeof formSchema>) => {
+  const handleEmailSignIn = async (values: z.infer<typeof emailSchema>) => {
     if (!auth) return;
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
@@ -109,6 +185,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary">
+      <div id="recaptcha-container"></div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <University className="mx-auto h-12 w-12 text-primary" />
@@ -121,22 +198,25 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="signin">
                 <LogIn className="mr-2 h-4 w-4" /> Sign In
               </TabsTrigger>
               <TabsTrigger value="signup">
                 <UserPlus className="mr-2 h-4 w-4" /> Sign Up
               </TabsTrigger>
+              <TabsTrigger value="phone">
+                <Phone className="mr-2 h-4 w-4" /> Phone
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="signin">
-              <Form {...form}>
+              <Form {...emailForm}>
                 <form
-                  onSubmit={form.handleSubmit(handleEmailSignIn)}
+                  onSubmit={emailForm.handleSubmit(handleEmailSignIn)}
                   className="space-y-6 pt-6"
                 >
                   <FormField
-                    control={form.control}
+                    control={emailForm.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
@@ -153,7 +233,7 @@ export default function LoginPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={emailForm.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
@@ -172,13 +252,13 @@ export default function LoginPage() {
               </Form>
             </TabsContent>
             <TabsContent value="signup">
-              <Form {...form}>
+              <Form {...emailForm}>
                 <form
-                  onSubmit={form.handleSubmit(handleEmailSignUp)}
+                  onSubmit={emailForm.handleSubmit(handleEmailSignUp)}
                   className="space-y-6 pt-6"
                 >
                   <FormField
-                    control={form.control}
+                    control={emailForm.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
@@ -195,7 +275,7 @@ export default function LoginPage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={emailForm.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
@@ -210,6 +290,70 @@ export default function LoginPage() {
                   <Button type="submit" className="w-full">
                     Sign Up
                   </Button>
+                </form>
+              </Form>
+            </TabsContent>
+            <TabsContent value="phone">
+               <Form {...phoneForm}>
+                <form 
+                    onSubmit={confirmationResult ? phoneForm.handleSubmit(handleVerifyOtp) : phoneForm.handleSubmit(handleSendOtp)}
+                    className="space-y-6 pt-6"
+                >
+                  {!confirmationResult ? (
+                    <FormField
+                      control={phoneForm.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-10 items-center rounded-md border border-input bg-background px-3">
+                                    <span className="text-sm text-muted-foreground">+91</span>
+                                </div>
+                                <Input
+                                    type="tel"
+                                    placeholder="98765 43210"
+                                    {...field}
+                                />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={phoneForm.control}
+                      name="otp"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Verification Code</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder="Enter 6-digit OTP"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  <Button type="submit" className="w-full" disabled={isSendingOtp || isVerifyingOtp}>
+                    {isSendingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isVerifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {confirmationResult ? 'Verify OTP' : 'Send OTP'}
+                  </Button>
+                   {confirmationResult && (
+                        <Button variant="link" className="w-full" onClick={() => {
+                            setConfirmationResult(null);
+                            phoneForm.reset();
+                        }}>
+                           Change phone number
+                        </Button>
+                    )}
                 </form>
               </Form>
             </TabsContent>
@@ -240,3 +384,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
