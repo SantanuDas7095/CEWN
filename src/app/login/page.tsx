@@ -138,7 +138,7 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, provider);
       router.push('/');
-    } catch (error: any) => {
+    } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
         // User closed the popup, do nothing.
         return;
@@ -384,5 +384,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
