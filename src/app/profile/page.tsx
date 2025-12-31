@@ -143,7 +143,7 @@ export default function ProfilePage() {
         const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
         setConfirmationResult(result);
         toast({ title: "OTP Sent", description: `An OTP has been sent to ${fullPhoneNumber}.` });
-    } catch (error: any) => {
+    } catch (error: any) {
         console.error("OTP Error:", error);
         toast({ title: "Failed to send OTP", description: error.message, variant: "destructive" });
     } finally {
@@ -488,7 +488,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
-
-    
