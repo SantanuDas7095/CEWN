@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -123,7 +124,7 @@ export default function ProfilePage() {
 
   const handleSendOtp = async () => {
     const phoneNumber = form.getValues("phoneNumber");
-    if (!phoneNumber || !auth) {
+    if (!phoneNumber) {
         toast({ title: "Phone number is required", variant: "destructive" });
         return;
     }
