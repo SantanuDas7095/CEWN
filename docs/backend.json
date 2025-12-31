@@ -148,7 +148,7 @@
     }
   },
   "auth": {
-    "providers": ["google.com", "password", "phone"]
+    "providers": ["google.com", "password"]
   },
   "firestore": {
     "/emergencyReports/{reportId}": {
