@@ -32,6 +32,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const emailSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -175,6 +176,11 @@ export default function LoginPage() {
                       </FormItem>
                     )}
                   />
+                   <div className="flex justify-end">
+                    <Button asChild variant="link" className="p-0 h-auto">
+                        <Link href="/reset-password">Forgot Password?</Link>
+                    </Button>
+                  </div>
                   <Button type="submit" className="w-full">
                     Sign In
                   </Button>
