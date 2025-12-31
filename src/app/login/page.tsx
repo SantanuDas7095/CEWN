@@ -99,25 +99,11 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push('/');
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        // If user is not found, we can try to sign them up instead.
-        try {
-            await createUserWithEmailAndPassword(auth, values.email, values.password);
-            router.push('/');
-        } catch (signupError: any) {
-            toast({
-                title: 'Sign-Up Failed',
-                description: signupError.message,
-                variant: 'destructive',
-            });
-        }
-      } else {
-         toast({
-            title: 'Sign-In Failed',
-            description: 'Invalid credentials. Please try again.',
-            variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Sign-In Failed',
+        description: 'Invalid credentials. Please check your email and password and try again.',
+        variant: 'destructive',
+      });
     }
   };
 
