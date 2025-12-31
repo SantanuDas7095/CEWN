@@ -127,6 +127,11 @@ export default function ProfilePage() {
         toast({ title: "Phone number is required", variant: "destructive" });
         return;
     }
+
+    if (phoneNumber.length < 10) {
+        toast({ title: "Invalid Phone Number", description: "Phone number must be at least 10 digits.", variant: "destructive" });
+        return;
+    }
     
     const fullPhoneNumber = `+91${phoneNumber}`;
 
