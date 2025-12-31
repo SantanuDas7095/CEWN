@@ -379,7 +379,7 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>Year of Study</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="e.g., 3" {...field} value={field.value || ''} />
+                              <Input type="number" placeholder="e.g., 3" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -455,3 +455,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
