@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { updateProfile, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, linkWithCredential, PhoneAuthProvider } from 'firebase/auth';
+import { updateProfile, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, linkWithCredential, PhoneAuthProvider, updatePhoneNumber } from 'firebase/auth';
 import { useUser, useFirestore, useAuth } from '@/firebase';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
@@ -162,7 +162,14 @@ export default function ProfilePage() {
     setIsVerifyingOtp(true);
     try {
       const credential = PhoneAuthProvider.credential(confirmationResult.verificationId, otp);
-      await linkWithCredential(user, credential);
+      
+      // If user has no phone number, just link it.
+      if (!user.phoneNumber) {
+        await linkWithCredential(user, credential);
+      } else {
+        // If user already has a phone number, update it.
+        await updatePhoneNumber(user, credential);
+      }
       
       toast({ title: "Phone Number Verified!", description: "Your phone number has been successfully linked to your account." });
       
@@ -188,7 +195,7 @@ export default function ProfilePage() {
           });
           setConfirmationResult(null);
           form.resetField("otp");
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
+      } else if (error.code === 'auth/account-exists-with-different-credential' || error.code === 'auth/credential-already-in-use') {
         toast({
             title: "Verification Failed",
             description: "This phone number is already linked to another account. Please use a different number.",
@@ -306,7 +313,7 @@ export default function ProfilePage() {
     <div className="flex min-h-screen flex-col bg-secondary">
       <Header />
       <main className="flex-1">
-        <div id="recaptcha-container" />
+        <div id="recaptcha-container" className={isEditing ? '' : 'hidden'} />
         <div className="container mx-auto max-w-2xl py-12 px-4 md:px-6">
           {!isEditing ? (
              <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} isAdmin={isAdmin} />
