@@ -45,8 +45,7 @@ service cloud.firestore {
     match /appointments/{appointmentId} {
        allow create: if request.auth != null;
        allow read: if isAdmin() || isOwner(resource.data.studentId);
-       // Allow any authenticated user to list, but the read rule will filter results
-       allow list: if request.auth != null;
+       allow list: if isAdmin();
        // Allow admin to change status
        // Allow user to cancel a scheduled appointment
        // Allow user to add feedback to a completed appointment
