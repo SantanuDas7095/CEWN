@@ -154,8 +154,8 @@ export default function ProfilePage() {
 
   const handleVerifyOtp = async () => {
     const otp = form.getValues("otp");
-    if (!otp || !confirmationResult) {
-      toast({ title: "OTP is required", variant: "destructive" });
+    if (!otp || !confirmationResult || !db) {
+      toast({ title: "OTP is required or system is not ready.", variant: "destructive" });
       return;
     }
 
@@ -165,17 +165,19 @@ export default function ProfilePage() {
       await linkWithCredential(user, credential);
       
       toast({ title: "Phone Number Verified!", description: "Your phone number has been successfully linked to your account." });
-      setConfirmationResult(null);
-      form.resetField("otp");
-      setIsChangingPhoneNumber(false);
-
-      // We should also save this to the user profile document now.
+      
+      // Save the new phone number to the Firestore profile
       const phoneNumber = form.getValues("phoneNumber");
       if (phoneNumber) {
         const fullPhoneNumber = `+91${phoneNumber}`;
         const userDocRef = doc(db, 'userProfile', user.uid);
-        await setDoc(userDocRef, { phoneNumber: fullPhoneNumber }, { merge: true });
+        await setDoc(userDocRef, { phoneNumber: fullPhoneNumber, updatedAt: serverTimestamp() }, { merge: true });
+        toast({ title: "Profile Updated", description: "Your new phone number has been saved to your profile." });
       }
+
+      setConfirmationResult(null);
+      form.resetField("otp");
+      setIsChangingPhoneNumber(false);
 
     } catch (error: any) {
       if (error.code === 'auth/provider-already-linked') {
