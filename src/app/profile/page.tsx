@@ -123,12 +123,7 @@ export default function ProfilePage() {
 
   const handleSendOtp = async () => {
     const phoneNumber = form.getValues("phoneNumber");
-    if (!phoneNumber) {
-        toast({ title: "Phone number is required", variant: "destructive" });
-        return;
-    }
-
-    if (phoneNumber.length < 10) {
+    if (!phoneNumber || phoneNumber.length < 10) {
         toast({ title: "Invalid Phone Number", description: "Phone number must be at least 10 digits.", variant: "destructive" });
         return;
     }
@@ -148,7 +143,7 @@ export default function ProfilePage() {
         const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
         setConfirmationResult(result);
         toast({ title: "OTP Sent", description: `An OTP has been sent to ${fullPhoneNumber}.` });
-    } catch (error: any) {
+    } catch (error: any) => {
         console.error("OTP Error:", error);
         toast({ title: "Failed to send OTP", description: error.message, variant: "destructive" });
     } finally {
@@ -181,7 +176,15 @@ export default function ProfilePage() {
       }
 
     } catch (error: any) {
-      if (error.code === 'auth/account-exists-with-different-credential') {
+      if (error.code === 'auth/provider-already-linked') {
+          toast({
+              title: "Already Verified",
+              description: "This phone number is already linked to your account.",
+              variant: "default"
+          });
+          setConfirmationResult(null);
+          form.resetField("otp");
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
         toast({
             title: "Verification Failed",
             description: "This phone number is already linked to another account. Please use a different number.",
@@ -485,5 +488,7 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
 
     
