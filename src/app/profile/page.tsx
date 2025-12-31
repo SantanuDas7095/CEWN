@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -306,8 +305,8 @@ export default function ProfilePage() {
     <div className="flex min-h-screen flex-col bg-secondary">
       <Header />
       <main className="flex-1">
-        <div id="recaptcha-container"></div>
         <div className="container mx-auto max-w-2xl py-12 px-4 md:px-6">
+           <div id="recaptcha-container" style={{ display: isEditing ? 'block' : 'none' }}></div>
           {!isEditing ? (
              <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} isAdmin={isAdmin} />
           ) : (
@@ -486,3 +485,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
