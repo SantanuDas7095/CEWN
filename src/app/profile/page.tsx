@@ -77,13 +77,18 @@ export default function ProfilePage() {
         return;
     }
     
+    const currentPhoneNumber = userProfile?.phoneNumber || user.phoneNumber || '';
+    const numberWithoutCountryCode = currentPhoneNumber.startsWith('+91') 
+      ? currentPhoneNumber.substring(3).trim()
+      : currentPhoneNumber;
+
     form.reset({
         displayName: userProfile?.displayName || user.displayName || '',
         enrollmentNumber: userProfile?.enrollmentNumber || '',
         hostel: userProfile?.hostel || '',
         department: userProfile?.department || '',
         year: userProfile?.year || undefined,
-        phoneNumber: userProfile?.phoneNumber || user.phoneNumber || '',
+        phoneNumber: numberWithoutCountryCode,
     });
 
   }, [user, userProfile, loading, db, router, form]);
@@ -122,7 +127,10 @@ export default function ProfilePage() {
         toast({ title: "Phone number is required", variant: "destructive" });
         return;
     }
-    if (phoneNumber === (userProfile?.phoneNumber || user.phoneNumber)) {
+    
+    const fullPhoneNumber = `+91${phoneNumber}`;
+
+    if (fullPhoneNumber === (userProfile?.phoneNumber || user.phoneNumber)) {
         toast({ title: "Phone number is already verified", variant: "default" });
         return;
     }
@@ -132,9 +140,9 @@ export default function ProfilePage() {
     const appVerifier = (window as any).recaptchaVerifier;
 
     try {
-        const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+        const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
         setConfirmationResult(result);
-        toast({ title: "OTP Sent", description: "An OTP has been sent to your mobile number." });
+        toast({ title: "OTP Sent", description: `An OTP has been sent to ${fullPhoneNumber}.` });
     } catch (error: any) {
         console.error("OTP Error:", error);
         toast({ title: "Failed to send OTP", description: error.message, variant: "destructive" });
@@ -201,6 +209,9 @@ export default function ProfilePage() {
       });
 
       const userDocRef = doc(db, 'userProfile', user.uid);
+      
+      const fullPhoneNumber = data.phoneNumber ? `+91${data.phoneNumber}` : (user.phoneNumber || '');
+
       const userProfileData: Partial<UserProfile> = {
         uid: user.uid,
         email: user.email!,
@@ -208,7 +219,7 @@ export default function ProfilePage() {
         photoURL: photoURL || '',
         enrollmentNumber: data.enrollmentNumber || '',
         department: data.department || '',
-        phoneNumber: data.phoneNumber || user.phoneNumber || '',
+        phoneNumber: fullPhoneNumber,
         updatedAt: serverTimestamp(),
       };
       
@@ -385,8 +396,11 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel className="flex items-center gap-2"><Phone/> Phone Number</FormLabel>
                             <FormControl>
-                                <div className="flex gap-2">
-                                    <Input type="tel" placeholder="+91 98765 43210" {...field} />
+                                <div className="flex items-center gap-2">
+                                    <div className="flex h-10 items-center rounded-md border border-input bg-background px-3">
+                                      <span className="text-sm text-muted-foreground">+91</span>
+                                    </div>
+                                    <Input type="tel" placeholder="98765 43210" {...field} />
                                     <Button type="button" onClick={handleSendOtp} disabled={isSendingOtp}>
                                         {isSendingOtp ? <Loader2 className="animate-spin" /> : 'Send OTP'}
                                     </Button>
@@ -441,5 +455,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
