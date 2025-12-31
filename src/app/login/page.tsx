@@ -67,7 +67,6 @@ export default function LoginPage() {
         // User closed the popup, do nothing.
         return;
       }
-      console.error('Error signing in with Google: ', error);
       toast({
         title: 'Authentication Error',
         description:
@@ -83,7 +82,6 @@ export default function LoginPage() {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
       router.push('/');
     } catch (error: any) {
-      console.error('Error signing up: ', error);
       toast({
         title: 'Sign-Up Failed',
         description:
@@ -101,7 +99,6 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push('/');
     } catch (error: any) {
-      console.error('Error signing in: ', error);
       toast({
         title: 'Sign-In Failed',
         description: 'Invalid credentials. Please try again.',
