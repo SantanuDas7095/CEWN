@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut, LogIn, User as UserIcon, BookCopy, CalendarClock, KeyRound } from "lucide-react";
+import { Menu, LogOut, LogIn, User as UserIcon, BookCopy, CalendarClock, KeyRound, University } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,7 +20,6 @@ import {
 import { useAdmin } from "@/hooks/use-admin";
 import { cn } from "@/lib/utils";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import Image from "next/image";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -52,7 +51,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2 font-bold" prefetch={false}>
-          <Image src="/images/logo.png" alt="NIT Agartala CEWN Logo" width={40} height={40} className="h-8 w-auto" />
+          <University className="h-8 w-8 text-primary" />
           <span className="text-lg font-headline">NIT Agartala CEWN</span>
         </Link>
         <nav className="hidden items-center gap-6 text-base font-medium md:flex lg:gap-8">
@@ -157,7 +156,7 @@ export function Header() {
               </SheetHeader>
               <div className="grid gap-6 p-6 pt-0">
                 <Link href="/" className="flex items-center gap-2 font-bold" prefetch={false}>
-                  <Image src="/images/logo.png" alt="NIT Agartala CEWN Logo" width={40} height={40} className="h-8 w-auto" />
+                  <University className="h-8 w-8 text-primary" />
                   <span className="text-lg font-headline">NIT Agartala CEWN</span>
                 </Link>
                 <nav className="grid gap-4">
