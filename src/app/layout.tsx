@@ -6,6 +6,9 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 export const metadata: Metadata = {
   title: 'NIT Agartala CEWN',
   description: 'One platform for Emergency, Health, and Food Safety',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
