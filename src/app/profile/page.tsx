@@ -176,8 +176,16 @@ export default function ProfilePage() {
       }
 
     } catch (error: any) {
-      console.error("OTP Verification Error:", error);
-      toast({ title: "OTP Verification Failed", description: error.message, variant: "destructive" });
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        toast({
+            title: "Verification Failed",
+            description: "This phone number is already linked to another account. Please use a different number.",
+            variant: "destructive"
+        });
+      } else {
+        console.error("OTP Verification Error:", error);
+        toast({ title: "OTP Verification Failed", description: error.message || 'An unknown error occurred.', variant: "destructive" });
+      }
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -472,5 +480,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
