@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, User as UserIcon, Check, Briefcase, Phone, MessageSquare } from 'lucide-react';
+import { Loader2, User as UserIcon, Check, Briefcase, Phone, MessageSquare, Edit } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -54,6 +54,7 @@ export default function ProfilePage() {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isChangingPhoneNumber, setIsChangingPhoneNumber] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -166,6 +167,7 @@ export default function ProfilePage() {
       toast({ title: "Phone Number Verified!", description: "Your phone number has been successfully linked to your account." });
       setConfirmationResult(null);
       form.resetField("otp");
+      setIsChangingPhoneNumber(false);
 
       // We should also save this to the user profile document now.
       const phoneNumber = form.getValues("phoneNumber");
@@ -238,9 +240,6 @@ export default function ProfilePage() {
 
       const userDocRef = doc(db, 'userProfile', user.uid);
       
-      // Phone number is handled by the OTP verification flow, but we can save it here if it wasn't changed.
-      const fullPhoneNumber = data.phoneNumber ? `+91${data.phoneNumber}` : (user.phoneNumber || '');
-
       const userProfileData: Partial<UserProfile> = {
         uid: user.uid,
         email: user.email!,
@@ -250,11 +249,6 @@ export default function ProfilePage() {
         department: data.department || '',
         updatedAt: serverTimestamp(),
       };
-      
-      // Only set phone number if it hasn't been handled by OTP flow
-      if (!confirmationResult && fullPhoneNumber) {
-          userProfileData.phoneNumber = fullPhoneNumber;
-      }
       
       if (!isAdmin) {
         userProfileData.hostel = data.hostel || '';
@@ -304,12 +298,14 @@ export default function ProfilePage() {
     }
   };
 
+  const userHasPhoneNumber = !!(user.phoneNumber || userProfile?.phoneNumber);
+
   return (
     <div className="flex min-h-screen flex-col bg-secondary">
       <Header />
       <main className="flex-1">
+        <div id="recaptcha-container" className={isEditing ? '' : 'hidden'}></div>
         <div className="container mx-auto max-w-2xl py-12 px-4 md:px-6">
-           <div id="recaptcha-container" style={{ display: isEditing ? 'block' : 'none' }}></div>
           {!isEditing ? (
              <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} isAdmin={isAdmin} />
           ) : (
@@ -422,47 +418,59 @@ export default function ProfilePage() {
                   )}
                   
                   <div className="space-y-4 rounded-lg border p-4">
-                    <FormField
-                        control={form.control}
-                        name="phoneNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2"><Phone/> Phone Number</FormLabel>
-                            <FormControl>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex h-10 items-center rounded-md border border-input bg-background px-3">
-                                      <span className="text-sm text-muted-foreground">+91</span>
-                                    </div>
-                                    <Input type="tel" placeholder="98765 43210" {...field} />
-                                    <Button type="button" onClick={handleSendOtp} disabled={isSendingOtp}>
-                                        {isSendingOtp ? <Loader2 className="animate-spin" /> : 'Send OTP'}
-                                    </Button>
-                                </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      {confirmationResult && (
-                        <FormField
-                            control={form.control}
-                            name="otp"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="flex items-center gap-2"><MessageSquare/> Verification Code</FormLabel>
-                                <FormControl>
-                                <div className="flex gap-2">
-                                    <Input placeholder="Enter 6-digit OTP" {...field} />
-                                    <Button type="button" onClick={handleVerifyOtp} disabled={isVerifyingOtp}>
-                                        {isVerifyingOtp ? <Loader2 className="animate-spin" /> : 'Verify'}
-                                    </Button>
-                                </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                     <FormLabel className="flex items-center gap-2"><Phone/> Phone Number</FormLabel>
+                     {userHasPhoneNumber && !isChangingPhoneNumber ? (
+                         <div className="flex items-center justify-between">
+                            <p className="text-muted-foreground">{user.phoneNumber || userProfile?.phoneNumber}</p>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setIsChangingPhoneNumber(true)}>
+                                <Edit className="mr-2 h-3 w-3" />
+                                Change
+                            </Button>
+                         </div>
+                     ) : (
+                        <>
+                            <FormField
+                                control={form.control}
+                                name="phoneNumber"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormControl>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex h-10 items-center rounded-md border border-input bg-background px-3">
+                                            <span className="text-sm text-muted-foreground">+91</span>
+                                            </div>
+                                            <Input type="tel" placeholder="98765 43210" {...field} />
+                                            <Button type="button" onClick={handleSendOtp} disabled={isSendingOtp}>
+                                                {isSendingOtp ? <Loader2 className="animate-spin" /> : 'Send OTP'}
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            {confirmationResult && (
+                                <FormField
+                                    control={form.control}
+                                    name="otp"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center gap-2"><MessageSquare/> Verification Code</FormLabel>
+                                        <FormControl>
+                                        <div className="flex gap-2">
+                                            <Input placeholder="Enter 6-digit OTP" {...field} />
+                                            <Button type="button" onClick={handleVerifyOtp} disabled={isVerifyingOtp}>
+                                                {isVerifyingOtp ? <Loader2 className="animate-spin" /> : 'Verify'}
+                                            </Button>
+                                        </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
                             )}
-                        />
-                      )}
+                        </>
+                     )}
                   </div>
 
 
@@ -475,7 +483,7 @@ export default function ProfilePage() {
                       )}
                       Save Changes
                     </Button>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => { setIsEditing(false); setIsChangingPhoneNumber(false); }}>Cancel</Button>
                   </div>
                 </form>
               </Form>
@@ -487,4 +495,5 @@ export default function ProfilePage() {
       <Footer />
     </div>
   );
-}
+
+    
