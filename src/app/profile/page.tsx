@@ -306,7 +306,7 @@ export default function ProfilePage() {
     <div className="flex min-h-screen flex-col bg-secondary">
       <Header />
       <main className="flex-1">
-        <div id="recaptcha-container" className="hidden"></div>
+        <div id="recaptcha-container" />
         <div className="container mx-auto max-w-2xl py-12 px-4 md:px-6">
           {!isEditing ? (
              <ProfileCard user={user} userProfile={userProfile} onEdit={() => setIsEditing(true)} isAdmin={isAdmin} />
@@ -498,5 +498,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
