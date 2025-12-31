@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { updateProfile, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { updateProfile, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, linkWithCredential, PhoneAuthProvider } from 'firebase/auth';
 import { useUser, useFirestore, useAuth } from '@/firebase';
 import { Header } from '@/components/common/header';
 import { Footer } from '@/components/common/footer';
@@ -87,7 +87,7 @@ export default function ProfilePage() {
         enrollmentNumber: userProfile?.enrollmentNumber || '',
         hostel: userProfile?.hostel || '',
         department: userProfile?.department || '',
-        year: userProfile?.year || undefined,
+        year: userProfile?.year,
         phoneNumber: numberWithoutCountryCode,
     });
 
@@ -154,20 +154,32 @@ export default function ProfilePage() {
   const handleVerifyOtp = async () => {
     const otp = form.getValues("otp");
     if (!otp || !confirmationResult) {
-        toast({ title: "OTP is required", variant: "destructive" });
-        return;
+      toast({ title: "OTP is required", variant: "destructive" });
+      return;
     }
 
     setIsVerifyingOtp(true);
     try {
-        await confirmationResult.confirm(otp);
-        toast({ title: "Phone Number Verified!", description: "Your phone number has been successfully linked." });
-        setConfirmationResult(null);
+      const credential = PhoneAuthProvider.credential(confirmationResult.verificationId, otp);
+      await linkWithCredential(user, credential);
+      
+      toast({ title: "Phone Number Verified!", description: "Your phone number has been successfully linked to your account." });
+      setConfirmationResult(null);
+      form.resetField("otp");
+
+      // We should also save this to the user profile document now.
+      const phoneNumber = form.getValues("phoneNumber");
+      if (phoneNumber) {
+        const fullPhoneNumber = `+91${phoneNumber}`;
+        const userDocRef = doc(db, 'userProfile', user.uid);
+        await setDoc(userDocRef, { phoneNumber: fullPhoneNumber }, { merge: true });
+      }
+
     } catch (error: any) {
-        console.error("OTP Verification Error:", error);
-        toast({ title: "OTP Verification Failed", description: error.message, variant: "destructive" });
+      console.error("OTP Verification Error:", error);
+      toast({ title: "OTP Verification Failed", description: error.message, variant: "destructive" });
     } finally {
-        setIsVerifyingOtp(false);
+      setIsVerifyingOtp(false);
     }
   }
 
@@ -210,6 +222,7 @@ export default function ProfilePage() {
 
       const userDocRef = doc(db, 'userProfile', user.uid);
       
+      // Phone number is handled by the OTP verification flow, but we can save it here if it wasn't changed.
       const fullPhoneNumber = data.phoneNumber ? `+91${data.phoneNumber}` : (user.phoneNumber || '');
 
       const userProfileData: Partial<UserProfile> = {
@@ -219,9 +232,13 @@ export default function ProfilePage() {
         photoURL: photoURL || '',
         enrollmentNumber: data.enrollmentNumber || '',
         department: data.department || '',
-        phoneNumber: fullPhoneNumber,
         updatedAt: serverTimestamp(),
       };
+      
+      // Only set phone number if it hasn't been handled by OTP flow
+      if (!confirmationResult && fullPhoneNumber) {
+          userProfileData.phoneNumber = fullPhoneNumber;
+      }
       
       if (!isAdmin) {
         userProfileData.hostel = data.hostel || '';
