@@ -113,9 +113,15 @@ export function Header() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
+                      <Link href="/update-password">
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        <span>Set/Update Password</span>
+                      </Link>
+                    </DropdownMenuItem>
+                     <DropdownMenuItem asChild>
                       <Link href="/reset-password">
                         <KeyRound className="mr-2 h-4 w-4" />
-                        <span>Reset Password</span>
+                        <span>Forgot Password</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut}>
