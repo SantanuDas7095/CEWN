@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, University, LogOut, LogIn, User as UserIcon, BookCopy, CalendarClock } from "lucide-react";
+import { Menu, University, LogOut, LogIn, User as UserIcon, BookCopy, CalendarClock, KeyRound } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -60,7 +60,7 @@ export function Header() {
               key={label}
               href={href}
               className={cn(
-                "transition-colors hover:text-primary",
+                "transition-colors hover:text-primary text-lg",
                 pathname === href ? "text-primary font-bold" : "text-muted-foreground"
               )}
               prefetch={false}
@@ -112,6 +112,12 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/reset-password">
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        <span>Reset Password</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
